@@ -1,7 +1,7 @@
 """
-CRS_CUSTOS.py — Gardien de Flotte DORN
+CRS_CUSTOS.py — Gardien de Flotte PENTERACT DORN
 ========================================
-Adapté de CRUSADER/CRS_CUSTOS.py — frégates et schémas JSON mis à jour pour DORN.
+Adapté de CRUSADER/CRS_CUSTOS.py — frégates et schémas JSON mis à jour pour PENTERACT DORN.
 
 Valide les fichiers IN/ et OUT/ de chaque frégate avant et après tout transfert.
 Stdlib uniquement — aucune dépendance externe.
@@ -167,7 +167,7 @@ def validate_dir(full_path):
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(description="CRS_CUSTOS — Gardien de Flotte DORN")
+    parser = argparse.ArgumentParser(description="CRS_CUSTOS — Gardien de Flotte PENTERACT DORN")
     parser.add_argument("--frigate",    required=True, choices=["SHARED", "F01", "F02", "F03", "F04"])
     parser.add_argument("--mode",       required=True, choices=["check-out", "check-in"])
     parser.add_argument("--drive-base", default=DEFAULT_DRIVE_BASE)
@@ -179,7 +179,7 @@ def main():
 
     print()
     print(f"═══════════════════════════════════════════════")
-    print(f"  CRS_CUSTOS DORN — {frigate} — {mode.upper()}")
+    print(f"  CRS_CUSTOS PENTERACT DORN — {frigate} — {mode.upper()}")
     print(f"  Drive base : {base}")
     print(f"═══════════════════════════════════════════════")
 
