@@ -17,7 +17,7 @@
 
 ## Présentation
 
-**DORN** est un pipeline de production vidéo automatisé générant des **visualisations mathématiques animées au style Neon SVG** — conçu pour le format Pop-Science Culture sur YouTube Shorts / TikTok.
+**PENTERACT DORN** est un pipeline de production vidéo automatisé générant des **visualisations mathématiques animées au style Neon SVG** — conçu pour le format Pop-Science Culture sur YouTube Shorts / TikTok.
 
 - **Format** : Vertical 1080×1920 (Shorts) ou Horizontal 1920×1080 (Long-form)
 - **Objectif** : Trancher des débats pop-culture (sport, musique, physique) par la géométrie et le code neon
@@ -28,7 +28,7 @@
 
 ## Philosophie — Le Nouvel Élément
 
-L'idée de DORN naît d'une rupture architecturale : remplacer les mathématiques abstraites froides
+L'idée de PENTERACT DORN naît d'une rupture architecturale : remplacer les mathématiques abstraites froides
 par un **Nouvel Élément** à haute densité émotionnelle — la Pop-Science Culture.
 Prendre les grands débats iconiques (Messi vs CR7, Kobe vs Jordan, la voix de Sia) et les trancher
 de manière irréfutable par la géométrie, la physique et le code neon.
@@ -99,10 +99,10 @@ Toute décision technique est filtrée par ATOM-IC (Atomic Transmutation & Optim
 
 ## Héritage CRUSADER
 
-DORN hérite des patterns techniques validés en production dans CRUSADER
+PENTERACT DORN hérite des patterns techniques validés en production dans CRUSADER
 (17h de débogage économisées — coût déjà payé) :
 
-| Pattern hérité | Frégates DORN | Source CRUSADER |
+| Pattern hérité | Frégates PENTERACT DORN | Source CRUSADER |
 |----------------|---------------|-----------------|
 | `calculateMetadata` Remotion (durée depuis JSON) | F03 | F03 SIGISMUND |
 | `--gl swangle` flag (rendu logiciel Colab) | F03 | F03 SIGISMUND |
@@ -117,7 +117,7 @@ DORN hérite des patterns techniques validés en production dans CRUSADER
 ## Axiomes du Projet
 
 1. **Gratuit** — Zéro API payante, zéro dépendance cloud commerciale
-2. **60 fps** — Standard DORN (timing dynamique — la math dicte la durée)
+2. **60 fps** — Standard PENTERACT DORN (timing dynamique — la math dicte la durée)
 3. **Timing dynamique** — `calculateMetadata` Remotion lit le JSON, coupe parfaite zéro manipulation
 4. **Colab-first** — Tout tourne dans Colab, le PC est une télécommande
 5. **Isolation des frégates** — Chaque frégate opère en silo : IN/ → CODEBASE/ → OUT/
