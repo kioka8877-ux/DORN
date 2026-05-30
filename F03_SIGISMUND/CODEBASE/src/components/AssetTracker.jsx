@@ -31,7 +31,8 @@ export const AssetTracker = ({
   const pace     = animation_speed?.pace_factor  ?? 1.0;
 
   const revealFrames =
-    (timing.x_range.end - timing.x_range.start) / timing.step_per_frame;
+    (timing.x_range.end - timing.x_range.start) / timing.step_per_frame *
+    (timing.complexity_coefficient ?? 1.0);
 
   // Progrès de l'animation
   const progress = computeRevealProgress(frame, revealFrames, revStyle, pace);

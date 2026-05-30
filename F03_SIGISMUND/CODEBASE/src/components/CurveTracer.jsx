@@ -23,7 +23,8 @@ export const CurveTracer = ({
 
   // Frames total pour révéler toute la courbe
   const revealFrames =
-    (timing.x_range.end - timing.x_range.start) / timing.step_per_frame;
+    (timing.x_range.end - timing.x_range.start) / timing.step_per_frame *
+    (timing.complexity_coefficient ?? 1.0);
 
   const progress  = computeRevealProgress(frame, revealFrames, revStyle, pace);
   const xCurrent  = timing.x_range.start + progress * (timing.x_range.end - timing.x_range.start);
