@@ -82,8 +82,9 @@ def compute_y_range(plan: dict) -> tuple[float, float]:
     y_min, y_max = float("inf"), float("-inf")
 
     # Conversion math.js → Python (subset sécurisé)
+    import re as _re
     def py_expr(expr: str) -> str:
-        return (
+        result = (
             expr
             .replace("^", "**")
             .replace("sin(",  "_m.sin(")
@@ -94,8 +95,8 @@ def compute_y_range(plan: dict) -> tuple[float, float]:
             .replace("log(",  "_m.log(")
             .replace("abs(",  "abs(")
             .replace("pi",    str(_m.pi))
-            .replace("e",     str(_m.e))
         )
+        return _re.sub(r'\be\b', str(_m.e), result)
 
     safe = {"__builtins__": {}, "_m": _m}
     for curve in curves:
