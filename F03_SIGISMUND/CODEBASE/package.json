@@ -1,0 +1,18 @@
+{
+  "name": "drn-f03-sigismund",
+  "version": "1.0.0",
+  "description": "DORN F03 SIGISMUND — Remotion SVG neon 60fps — VIIe Légion",
+  "scripts": {
+    "start": "remotion studio",
+    "render": "remotion render Main OUT/video_render.mp4 --gl swangle --concurrency 1"
+  },
+  "dependencies": {
+    "@remotion/bundler": "^4.0.259",
+    "@remotion/cli": "^4.0.259",
+    "@remotion/renderer": "^4.0.259",
+    "mathjs": "^13.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.259"
+  }
+}
