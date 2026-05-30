@@ -108,6 +108,22 @@ export const VirtualCamera = ({
     }
   }
 
+  if (mode === "follow_curve_tip" && active.target_curve_id) {
+    const tc = reactor_curves?.find((c) => c.id === active.target_curve_id);
+    if (tc && toCanvasX && toCanvasY) {
+      const revealFrames =
+        (timing.x_range.end - timing.x_range.start) / timing.step_per_frame *
+        (timing.complexity_coefficient ?? 1.0);
+      const prog = Math.min(frame / revealFrames, 1);
+      const xPos = timing.x_range.start + prog * (timing.x_range.end - timing.x_range.start);
+      const yVal = evalMath(tc.math_input, xPos);
+      if (yVal !== null) {
+        pivotX = toCanvasX(xPos);
+        pivotY = toCanvasY(yVal);
+      }
+    }
+  }
+
   // Transformation CSS
   const transform = [
     `translate(${width / 2 + currentX + shakeX}px, ${height / 2 + currentY + shakeY}px)`,
