@@ -202,7 +202,7 @@ def render_chunk(info: dict) -> dict:
     # Assets PNG
     pub_in = os.path.join(cb, "public", "IN")
     os.makedirs(pub_in, exist_ok=True)
-    for fname, b64 in (info.get("assets_b64") or {}).items():
+    for fname, b64 in (info.get("assets_b64") or {{}}).items():
         with open(os.path.join(pub_in, fname), "wb") as f:
             f.write(base64.b64decode(b64))
 
@@ -210,22 +210,22 @@ def render_chunk(info: dict) -> dict:
 
     out_dir = os.path.join(cb, "OUT_CHUNKS")
     os.makedirs(out_dir, exist_ok=True)
-    chunk_out = os.path.join(out_dir, f"chunk_{info[chr(39)]chunk_id{chr(39)]}.mp4")
+    chunk_out = os.path.join(out_dir, f"chunk_{{info['chunk_id']}}.mp4")
 
     cmd = [
         "npx", "remotion", "render", "Main", chunk_out,
         "--gl", "swangle",
-        "--frames",      f"{info['start_frame']}-{info['end_frame']}",
+        "--frames",      f"{{info['start_frame']}}-{{info['end_frame']}}",
         "--concurrency", "1",
         "--props",       json.dumps(info["props"]),
     ]
     result = subprocess.run(cmd, cwd=cb, capture_output=True, text=True)
     if result.returncode != 0:
-        return {"success": False, "error": result.stderr[-2000:], "chunk_id": info["chunk_id"]}
+        return {{"success": False, "error": result.stderr[-2000:], "chunk_id": info["chunk_id"]}}
 
     with open(chunk_out, "rb") as f:
-        return {"success": True, "chunk_id": info["chunk_id"],
-                "video_b64": base64.b64encode(f.read()).decode()}
+        return {{"success": True, "chunk_id": info["chunk_id"],
+                "video_b64": base64.b64encode(f.read()).decode()}}
 
 
 @app.local_entrypoint()
@@ -241,21 +241,21 @@ def main():
     chunk_paths = []
     for r in sorted(results, key=lambda x: x["chunk_id"]):
         if not r["success"]:
-            print(f"[ERREUR chunk {r['chunk_id']}] {r['error']}")
+            print(f"[ERREUR chunk {{r['chunk_id']}}] {{r['error']}}")
             sys.exit(1)
-        p = out_dir / f"chunk_{r['chunk_id']}.mp4"
+        p = out_dir / f"chunk_{{r['chunk_id']}}.mp4"
         p.write_bytes(base64.b64decode(r["video_b64"]))
         chunk_paths.append(str(p))
 
     # Concat FFmpeg
     list_file = out_dir / "chunks.txt"
-    list_file.write_text("\\n".join(f"file \\'{c}\\'" for c in chunk_paths))
+    list_file.write_text("\\n".join(f"file \\'{{c}}\\'" for c in chunk_paths))
     final = "{final_video}"
     subprocess.run([
         "ffmpeg", "-y", "-f", "concat", "-safe", "0",
         "-i", str(list_file), "-c", "copy", final,
     ], check=True)
-    print(f"[DRN-F03] Rendu Modal terminé  →  {final}")
+    print(f"[DRN-F03] Rendu Modal terminé  →  {{final}}")
 '''
 
 
