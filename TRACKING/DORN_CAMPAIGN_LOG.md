@@ -26,6 +26,40 @@
 
 ---
 
+## CAMP_01 — AUDIT & BUGFIX — 2026-05-30
+
+### Audit statique complet — 6 bugs identifiés et corrigés
+
+| # | Fichier(s) | Bug | Severity | Commit |
+|---|-----------|-----|----------|--------|
+| 1 | `DRN_F04A.ipynb` cell-4, `DRN_F04B.ipynb` cell-5 | `--frigate F04A/F04B` invalides → argparse exit 2 | BLOQUANT | e008d22 |
+| 2 | `drn_f03_sigismund.py` | `MODAL_WORKER_TEMPLATE.format()` crash IndexError — accolades Python non doublées | BLOQUANT | ce98d59 |
+| 3 | `CurveTracer.jsx`, `AssetTracker.jsx` | `complexity_coefficient` absent de `revealFrames` → courbe gelée à 60% pour `wave_analysis` | VISUEL | 7c14c49 |
+| 4 | `drn_f03_sigismund.py` | `.replace("e")` corrompt `_m.exp(` → regex `\be\b` | MINEUR | f6e46c5 |
+| 5 | `VirtualCamera.jsx` | Mode `follow_curve_tip` non implémenté → caméra statique silencieuse | MINEUR | 079f463 |
+| 6 | `DRN_F02.ipynb` cell-7 | `import os` absent → NameError si kernel redémarré | MINEUR | 2c050b4 |
+
+### Fil d'Ariane — 2026-05-30
+
+| Date | Frégate | Phase | Action | Validé |
+|------|---------|-------|--------|--------|
+| 2026-05-30 | F04 | AUDIT | Bug 1 : corriger appels CUSTOS F04A/F04B → F04 | ✓ |
+| 2026-05-30 | F03 | AUDIT | Bug 2 : MODAL_WORKER_TEMPLATE accolades doublées | ✓ |
+| 2026-05-30 | F03 | AUDIT | Bug 3 : complexity_coefficient dans CurveTracer + AssetTracker | ✓ |
+| 2026-05-30 | F03 | AUDIT | Bug 4 : compute_y_range replace('e') → regex \be\b | ✓ |
+| 2026-05-30 | F03 | AUDIT | Bug 5 : follow_curve_tip implémenté dans VirtualCamera | ✓ |
+| 2026-05-30 | F02 | AUDIT | Bug 6 : import os ajouté en CELL 7 DRN_F02.ipynb | ✓ |
+
+### État post-audit
+
+- Mode `--mode direct` F03 : **PRÊT** (seul le bug 2 bloquait Modal)
+- F04A + F04B check-in CUSTOS : **CORRIGÉS** (bug 1)
+- `wave_analysis` engine_type : **CORRIGÉ** (bug 3)
+- `geometric_construction` + `single_proof` camera : **CORRIGÉS** (bug 5)
+- Tous les engine_types : **OPÉRATIONNELS**
+
+---
+
 ## CAMP_00 — INITIALISATION — 2026-05-29
 
 Structure du repo initialisée. Directive Impériale V3 scellée.
