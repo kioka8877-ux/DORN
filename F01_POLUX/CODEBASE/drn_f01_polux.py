@@ -3,15 +3,15 @@ drn_f01_polux.py — Frégate F01 POLUX
 ======================================
 PENTERACT DORN V3 — VIIe Légion
 
-Validation plan_de_vol.json V3 + strip EXIF destructif sur tous les PNG.
+Validation plan_de_vol.json V3 + strip EXIF destructif sur tous les PNG et JPG/JPEG.
 Stdlib uniquement + Pillow (disponible sur Google Colab sans installation).
 
 Usage (Colab) :
     python drn_f01_polux.py
     python drn_f01_polux.py --drive-base /content/drive/MyDrive/DRIVE_DORN
 
-Entrées  : F01_POLUX/IN/plan_de_vol.json  +  F01_POLUX/IN/images/*.png
-Sorties  : F01_POLUX/OUT/plan_de_vol.json +  F01_POLUX/OUT/images/*.png
+Entrées  : F01_POLUX/IN/plan_de_vol.json  +  F01_POLUX/IN/images/*.png / *.jpg / *.jpeg
+Sorties  : F01_POLUX/OUT/plan_de_vol.json +  F01_POLUX/OUT/images/*.png / *.jpg / *.jpeg
 
 Exit codes :
     0 = VALIDATION OK — transit F01 → F02 autorisé
@@ -29,6 +29,7 @@ import sys
 
 DEFAULT_DRIVE_BASE = "/content/drive/MyDrive/DRIVE_DORN"
 
+VALID_IMAGE_EXTS     = {".png", ".jpg", ".jpeg"}
 VALID_ENGINE_TYPES   = {"time_evolution_comparison", "wave_analysis",
                         "geometric_construction", "single_proof"}
 VALID_FORMATS        = {"vertical", "horizontal"}
@@ -95,7 +96,7 @@ def validate_concept_metadata(data):
     for field in ("title", "hook", "thesis"):
         v = check_key(cm, field, "concept_metadata")
         if v:
-            ok(f"concept_metadata.{field} = '{v[:60]}{'...' if len(v) > 60 else ''}'")
+            ok(f"concept_metadata.{field} = '{v[:60]}{'...' if len(v) > 60 else ''}' ")
     engine = check_key(cm, "engine_type", "concept_metadata")
     if engine:
         if check_in(engine, VALID_ENGINE_TYPES, "concept_metadata.engine_type"):
@@ -180,7 +181,7 @@ def validate_space_environment(data):
             ok(f"space_environment.{field} = '{v}'")
 
 
-def validate_reactor_curves(data, png_files):
+def validate_reactor_curves(data, image_files):
     info("Niveau 5 — reactor_curves")
     curves = check_key(data, "reactor_curves", "racine", non_empty=False)
     if curves is None:
@@ -196,7 +197,7 @@ def validate_reactor_curves(data, png_files):
             ok(f"{lbl}.id = '{cid}'")
         mi = check_key(c, "math_input", lbl)
         if mi:
-            ok(f"{lbl}.math_input = '{mi[:50]}{'...' if len(mi)>50 else ''}'")
+            ok(f"{lbl}.math_input = '{mi[:50]}{'...' if len(mi)>50 else ''}' ")
         rs = c.get("render_style", {})
         color = rs.get("color_hex", "")
         if not HEX_COLOR_RE.match(color):
@@ -209,10 +210,13 @@ def validate_reactor_curves(data, png_files):
             fail(f"{lbl}.animation_speed.reveal_style invalide : '{rv}'")
         elif rv:
             ok(f"{lbl}.animation_speed.reveal_style = {rv}")
-        # PNG référencé
+        # Image référencée (PNG ou JPG)
         asset = c.get("tracking_target", {}).get("asset_filename", "")
         if asset:
-            if asset not in png_files:
+            ext = os.path.splitext(asset)[1].lower()
+            if ext not in VALID_IMAGE_EXTS:
+                fail(f"{lbl}.tracking_target.asset_filename '{asset}' — extension non supportée (PNG, JPG, JPEG uniquement)")
+            elif asset not in image_files:
                 warn(f"{lbl}.tracking_target.asset_filename '{asset}' absent de IN/images/")
             else:
                 ok(f"{lbl}.tracking_target.asset_filename = '{asset}' (présent)")
@@ -243,7 +247,7 @@ def validate_camera_plan(data):
         if last.get("mode") != "final_proof_lock":
             warn("Le dernier segment caméra devrait être 'final_proof_lock'")
         else:
-            ok(f"Dernier segment = final_proof_lock ✓")
+            ok(f"Dernier segment = final_proof_lock")
         ok(f"{len(segs)} segment(s) caméra")
 
 
@@ -254,7 +258,7 @@ def validate_final_frame(data):
         return
     ann = check_key(ff, "annotation", "final_frame")
     if ann:
-        ok(f"final_frame.annotation = '{ann[:60]}{'...' if len(ann)>60 else ''}'")
+        ok(f"final_frame.annotation = '{ann[:60]}{'...' if len(ann)>60 else ''}' ")
     fdf = ff.get("freeze_duration_frames", 0)
     if fdf <= 0:
         fail(f"final_frame.freeze_duration_frames invalide : {fdf}")
@@ -277,10 +281,10 @@ def validate_audio(data):
             ok(f"audio_synthesizer.{field} = {v}")
 
 
-# ─── Strip EXIF PNG ─────────────────────────────────────────────────────────────
+# ─── Strip EXIF (PNG + JPG) ─────────────────────────────────────────────────────
 
-def strip_exif_png(src_path, dst_path):
-    """Recrée le PNG sans aucune métadonnée EXIF/XMP/tEXt."""
+def strip_exif(src_path, dst_path):
+    """Recrée l'image sans métadonnées EXIF/XMP/tEXt. Supporte PNG et JPG/JPEG."""
     try:
         from PIL import Image
     except ImportError:
@@ -290,7 +294,11 @@ def strip_exif_png(src_path, dst_path):
         img = Image.open(src_path)
         clean = Image.new(img.mode, img.size)
         clean.putdata(list(img.getdata()))
-        clean.save(dst_path, format="PNG", optimize=False)
+        ext = os.path.splitext(src_path)[1].lower()
+        if ext in (".jpg", ".jpeg"):
+            clean.save(dst_path, format="JPEG", quality=95, optimize=True)
+        else:
+            clean.save(dst_path, format="PNG", optimize=False)
         src_size = os.path.getsize(src_path)
         dst_size = os.path.getsize(dst_path)
         ok(f"EXIF strip : {os.path.basename(src_path)} "
@@ -305,7 +313,7 @@ def strip_exif_png(src_path, dst_path):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="PENTERACT DORN — F01 POLUX — Validation JSON + Strip EXIF PNG"
+        description="PENTERACT DORN — F01 POLUX — Validation JSON + Strip EXIF PNG/JPG"
     )
     parser.add_argument("--drive-base", default=DEFAULT_DRIVE_BASE)
     args = parser.parse_args()
@@ -341,18 +349,18 @@ def main():
         _exit_report(base)
         return
 
-    # ── Inventaire PNG ──────────────────────────────────────────────────────────
-    info(f"Inventaire PNG : {in_img_dir}")
-    png_files = set()
+    # ── Inventaire images (PNG + JPG/JPEG) ─────────────────────────────────────
+    info(f"Inventaire images : {in_img_dir}")
+    image_files = set()
     if os.path.isdir(in_img_dir):
-        png_files = {
+        image_files = {
             f for f in os.listdir(in_img_dir)
-            if f.lower().endswith(".png")
+            if os.path.splitext(f)[1].lower() in VALID_IMAGE_EXTS
         }
-        if png_files:
-            ok(f"{len(png_files)} PNG trouvé(s) : {', '.join(sorted(png_files))}")
+        if image_files:
+            ok(f"{len(image_files)} image(s) trouvée(s) : {', '.join(sorted(image_files))}")
         else:
-            warn("Aucun PNG dans IN/images/ — assets vides")
+            warn("Aucune image (PNG/JPG/JPEG) dans IN/images/ — assets vides")
     else:
         warn(f"Dossier IN/images/ absent : {in_img_dir}")
     print()
@@ -366,7 +374,7 @@ def main():
     print()
     validate_space_environment(data)
     print()
-    validate_reactor_curves(data, png_files)
+    validate_reactor_curves(data, image_files)
     print()
     validate_camera_plan(data)
     print()
@@ -380,16 +388,16 @@ def main():
         return
 
     # ── Strip EXIF + copie OUT ──────────────────────────────────────────────────
-    info("Strip EXIF PNG + copie vers OUT/")
+    info("Strip EXIF images + copie vers OUT/")
     os.makedirs(out_img_dir, exist_ok=True)
 
-    if png_files:
-        for png in sorted(png_files):
-            src = os.path.join(in_img_dir, png)
-            dst = os.path.join(out_img_dir, png)
-            strip_exif_png(src, dst)
+    if image_files:
+        for img_name in sorted(image_files):
+            src = os.path.join(in_img_dir, img_name)
+            dst = os.path.join(out_img_dir, img_name)
+            strip_exif(src, dst)
     else:
-        info("Aucun PNG à traiter")
+        info("Aucune image à traiter")
     print()
 
     if errors:
@@ -411,7 +419,7 @@ def _exit_report(base):
         print(f"  F01 POLUX — VALIDATION FAIL — {len(errors)} erreur(s), {len(warnings)} warning(s)")
         print()
         for e in errors:
-            print(f"    ✗ {e}")
+            print(f"    x {e}")
         print()
         print("  Transit F01 → F02 INTERDIT. Corriger le plan_de_vol.json.")
         print("═══════════════════════════════════════════════════════")
@@ -421,7 +429,7 @@ def _exit_report(base):
         if warnings:
             print()
             for w in warnings:
-                print(f"    ⚠ {w}")
+                print(f"    ! {w}")
         print()
         print("  OUT/ prêt. Passer META_CAMERA puis F02 CASTELLAN.")
         print("  Commande de transit :")
