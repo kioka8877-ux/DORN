@@ -9,7 +9,7 @@
 
 | Frégate | Nom | Rôle | Statut | Date de Scellement |
 |---------|-----|------|--------|--------------------|
-| F01 | POLUX | Oracle & Curation → plan_de_vol.json | EN FORGE | — |
+| F01 | POLUX | Oracle & Curation → plan_de_vol.json | SCELLÉ ✓ | 2026-05-31 |
 | F02 | CASTELLAN | HUD Contrôle + Sim. → plan_de_vol.json (figé) | EN FORGE | — |
 | F03 | SIGISMUND | Réacteur Multi-Formes → video_render.mp4 | EN FORGE | — |
 | F04A | INWIT | Viewer + Speed Control | EN FORGE | — |
@@ -19,10 +19,37 @@
 
 **Compteur de Guerre :**
 ```
-[░░░░] 0/4 frégates scellées
+[█░░░] 1/4 frégates scellées
 [░░]   0/2 metaprompts scellés
-[░░░░] 0/4 tests de production réussis
+[█░░░] 1/4 tests de production réussis
 ```
+
+---
+
+## CAMP_02 — TEST DE PRODUCTION F01 — 2026-05-31
+
+### F01 POLUX — Test de Production
+
+| # | Cellule | Résultat | Note |
+|---|---------|----------|------|
+| 1 | CELL 1 — Mount Drive | ✓ OK | Drive monté |
+| 2 | CELL 2 — Init structure + scripts | ✓ OK | Dépôt rendu public, scripts téléchargés |
+| 3 | CELL 3 — Drive base | ✓ OK | |
+| 4 | CELL 4 — Pillow | ✓ OK | |
+| 5 | CELL 5 — Copy script | ✓ OK | |
+| 6 | CELL 6 — drn_f01_polux.py | ✓ VALIDATION OK | plan_de_vol.json + images IN requis |
+| 7 | CELL 7 — CRS_CUSTOS check-in F01 | ✓ CHECK-IN OK | Transit F01→F02 autorisé |
+
+**F01 POLUX — SCELLÉ. PAR LA VOLONTÉ DE L'EMPEREUR ET DE ROGAL DORN.**
+
+### Fil d'Ariane — 2026-05-31
+
+| Date | Frégate | Phase | Action | Validé |
+|------|---------|-------|--------|--------|
+| 2026-05-31 | F01 | PROD | Test de production complet — 7 cellules | ✓ |
+| 2026-05-31 | F01 | PROD | drn_f01_polux.py — VALIDATION OK | ✓ |
+| 2026-05-31 | F01 | PROD | CRS_CUSTOS check-in F01 — OK | ✓ |
+| 2026-05-31 | F01 | SCELLEMENT | F01 POLUX scellé | ✓ |
 
 ---
 
@@ -142,6 +169,13 @@ Ils ont été validés en conditions de production réelles dans CRUSADER.
 
 | Date | Frégate | Phase | Action | Validé |
 |------|---------|-------|--------|--------|
+| 2026-05-31 | F01 | PROD | Test de production complet — SCELLÉ | ✓ |
+| 2026-05-30 | F04 | AUDIT | Bug 1 : corriger appels CUSTOS F04A/F04B → F04 | ✓ |
+| 2026-05-30 | F03 | AUDIT | Bug 2 : MODAL_WORKER_TEMPLATE accolades doublées | ✓ |
+| 2026-05-30 | F03 | AUDIT | Bug 3 : complexity_coefficient dans CurveTracer + AssetTracker | ✓ |
+| 2026-05-30 | F03 | AUDIT | Bug 4 : compute_y_range replace('e') → regex \be\b | ✓ |
+| 2026-05-30 | F03 | AUDIT | Bug 5 : follow_curve_tip implémenté dans VirtualCamera | ✓ |
+| 2026-05-30 | F02 | AUDIT | Bug 6 : import os ajouté en CELL 7 DRN_F02.ipynb | ✓ |
 | 2026-05-29 | — | INIT | Création du repo DORN sur GitHub | ✓ |
 | 2026-05-29 | — | INIT | Structure des frégates initialisée | ✓ |
 | 2026-05-29 | — | INIT | Directive Impériale V3 scellée (PDF) | ✓ |
@@ -149,11 +183,12 @@ Ils ont été validés en conditions de production réelles dans CRUSADER.
 
 ---
 
-## F01 — POLUX
+## F01 — POLUX ✓ SCELLÉ
 - Rôle : Validation plan_de_vol.json + strip EXIF PNG
 - Stack : Python stdlib + Pillow (EXIF)
 - IN: plan_de_vol.json + images/*.png | OUT: plan_de_vol.json (valide) + images/*.png (propres)
-- Statut : EN FORGE
+- Statut : **SCELLÉ — 2026-05-31**
+- Test de production : **RÉUSSI**
 
 ## F02 — CASTELLAN
 - Rôle : HUD Streamlit + Canvas JS, simulation courbes, validation JSON
