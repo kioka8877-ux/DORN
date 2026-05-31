@@ -151,7 +151,7 @@ step_per_frame = x_range / (target_duration_seconds × fps − final_freeze_fram
 
 | # | Date | Campagne | Source | Destination | Fichiers | CUSTOS Out | CUSTOS In | Statut |
 |---|------|----------|--------|-------------|----------|------------|-----------|--------|
-| — | — | — | — | — | — | — | — | En attente CAMP_01 |
+| 1 | 2026-05-31 | CAMP_02 | F01 POLUX OUT | F02 CASTELLAN IN | plan_de_vol.json + images/*.png | — | ✓ CHECK-IN OK | TRANSIT AUTORISÉ |
 
 ---
 
