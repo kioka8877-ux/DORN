@@ -471,6 +471,9 @@ def main():
             if st.button("FIGER LE PLAN DE VOL", type="primary", use_container_width=True):
                 data["validated_by_magos"] = True
                 data["validation_timestamp"] = datetime.datetime.utcnow().isoformat() + "Z"
+                # Aligne freeze_duration_frames sur final_freeze_frames
+                data.setdefault("final_frame", {})["freeze_duration_frames"] = \
+                    data.get("timing", {}).get("final_freeze_frames", 180)
                 save_json(data, out_json)
                 st.success(f"Plan de vol figé → {out_json}")
                 st.success("validated_by_magos: true | camera_plan inclus | Passer à F03 SIGISMUND.")
