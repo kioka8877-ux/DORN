@@ -1,0 +1,114 @@
+{
+  "matrix_signature": "PENTERACT_DORN_VII_LEGION",
+  "concept_metadata": {
+    "title": "La Science Prouve Le Statut De GOAT De Kobe Bryant",
+    "hook": "Pourquoi la régularité de Kobe a brisé le talent brut de la NBA.",
+    "thesis": "L'effet cumulé exponentiel surpasse une impulsion initiale décroissante à long terme.",
+    "engine_type": "time_evolution_comparison",
+    "format": "vertical",
+    "fps": 60
+  },
+  "timing": {
+    "fps": 60,
+    "target_duration_seconds": 10,
+    "x_range": {
+      "start": 0,
+      "end": 10
+    },
+    "step_per_frame": 0.0238,
+    "complexity_coefficient": 1.0,
+    "final_freeze_frames": 180,
+    "playback_speed": 1.0
+  },
+  "space_environment": {
+    "geometry_mode": "cartesian",
+    "x_label": "Années de carrière (normalisées)",
+    "y_label": "Niveau d'impact / Intensité",
+    "background_asset": ""
+  },
+  "reactor_curves": [
+    {
+      "id": "kobe",
+      "math_input": "0.5 * exp(0.25 * x)",
+      "render_style": {
+        "color_hex": "#FFD700",
+        "glow_radius_px": 20,
+        "line_width_px": 6
+      },
+      "animation_speed": {
+        "reveal_style": "ease_in_out",
+        "pace_factor": 1.0
+      },
+      "tracking_target": {
+        "asset_filename": "kobye.png",
+        "scale_factor": 1.2,
+        "physics": {
+          "auto_rotate_slope": true,
+          "inertia_smooth": 0.1
+        }
+      }
+    },
+    {
+      "id": "others",
+      "math_input": "5 / (1 + exp(0.4 * (x - 3)))",
+      "render_style": {
+        "color_hex": "#00FFD1",
+        "glow_radius_px": 20,
+        "line_width_px": 6
+      },
+      "animation_speed": {
+        "reveal_style": "ease_in_out",
+        "pace_factor": 1.0
+      },
+      "tracking_target": {
+        "asset_filename": "others.jpg",
+        "scale_factor": 1.2,
+        "physics": {
+          "auto_rotate_slope": true,
+          "inertia_smooth": 0.1
+        }
+      }
+    }
+  ],
+  "camera_plan": {
+    "camera_signature": "DORN_META_CAMERA_V1",
+    "global_style": {
+      "movement_energy": "cinematic",
+      "default_easing": "easeInOutCubic",
+      "shake_intensity": 0.08
+    },
+    "camera_segments": [
+      {
+        "start_frame": 0,
+        "end_frame": 420,
+        "mode": "follow_asset",
+        "target_curve_id": "kobe",
+        "zoom": 1.15,
+        "x_offset": 0,
+        "y_offset": -40,
+        "shake": 0.03
+      },
+      {
+        "start_frame": 420,
+        "end_frame": 600,
+        "mode": "final_proof_lock",
+        "target_curve_id": "",
+        "zoom": 1.0,
+        "x_offset": 0,
+        "y_offset": 0,
+        "shake": 0.0
+      }
+    ]
+  },
+  "final_frame": {
+    "annotation": "Kobe Bryant : Mamba Mentality = Effet Cumulé dévastateur.",
+    "freeze_duration_frames": 180
+  },
+  "audio_synthesizer": {
+    "wave_type": "sine",
+    "base_frequency_hz": 220,
+    "frequency_multiplier": 12.0
+  },
+  "validated_by_magos": true,
+  "validation_timestamp": "2026-06-01T09:37:53.045330Z"
+}
