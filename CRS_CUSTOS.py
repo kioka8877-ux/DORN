@@ -53,6 +53,8 @@ MANIFEST = {
             "files": [
                 {"path": "F02_CASTELLAN/IN/plan_de_vol.json", "type": "json",
                  "required_keys": ["concept_metadata", "timing", "reactor_curves"]},
+                {"path": "F02_CASTELLAN/IN/camera_plan.json", "type": "json",
+                 "required_keys": ["camera_plan"]},
             ],
             "dirs": ["F02_CASTELLAN/IN/images"],
         },
@@ -60,7 +62,7 @@ MANIFEST = {
             "files": [
                 {"path": "F02_CASTELLAN/OUT/plan_de_vol.json", "type": "json",
                  "required_keys": ["concept_metadata", "timing", "reactor_curves",
-                                   "validated_by_magos"]},
+                                   "camera_plan", "validated_by_magos"]},
             ]
         },
     },
