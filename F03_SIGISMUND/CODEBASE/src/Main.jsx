@@ -3,6 +3,7 @@ import { useCurrentFrame, useVideoConfig, interpolate } from "remotion";
 import { VirtualCamera }  from "./components/VirtualCamera";
 import { CurveTracer }    from "./components/CurveTracer";
 import { AssetTracker }   from "./components/AssetTracker";
+import { evalMath, computeRevealProgress } from "./components/MathInterpreter";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN — Composition Remotion principale
@@ -134,6 +135,19 @@ export const Main = ({ planDeVol, computed }) => {
                 geometryMode={space_environment.geometry_mode}
               />
             ))}
+
+          {/* Labels inline — suit le tip de chaque courbe */}
+          {reactor_curves.map((curve) => (
+            <CurveLabel
+              key={`label-${curve.id}`}
+              curve={curve}
+              frame={frame}
+              timing={timing}
+              toCanvasX={toCanvasX}
+              toCanvasY={toCanvasY}
+              geometryMode={space_environment.geometry_mode}
+            />
+          ))}
         </svg>
       </VirtualCamera>
 
@@ -202,32 +216,38 @@ const Defs = ({ curves }) => (
 // ─────────────────────────────────────────────────────────────────────────────
 const Grid = ({ M, plotW, plotH, timing, yMin, yMax, geometryMode, width, height }) => {
   if (geometryMode === "polar") {
-    const cx  = M.left + plotW / 2;
-    const cy  = M.top  + plotH / 2;
+    const cx   = M.left + plotW / 2;
+    const cy   = M.top  + plotH / 2;
     const maxR = Math.min(plotW, plotH) / 2;
     const rings = 5;
     return (
-      <g opacity={0.22}>
-        {Array.from({ length: rings }, (_, i) => (
-          <circle
-            key={i} cx={cx} cy={cy}
-            r={(maxR * (i + 1)) / rings}
-            fill="none" stroke="#2a2a2a" strokeWidth={1}
-          />
-        ))}
-        {Array.from({ length: 12 }, (_, i) => {
-          const a = (i / 12) * 2 * Math.PI;
-          return (
-            <line
-              key={i} x1={cx} y1={cy}
-              x2={cx + maxR * Math.cos(a)} y2={cy + maxR * Math.sin(a)}
-              stroke="#2a2a2a" strokeWidth={1}
-            />
-          );
-        })}
-        <line x1={cx - maxR} y1={cy} x2={cx + maxR} y2={cy} stroke="#444" strokeWidth={1.5} />
-        <line x1={cx} y1={cy - maxR} x2={cx} y2={cy + maxR} stroke="#444" strokeWidth={1.5} />
-      </g>
+      <>
+        <defs>
+          <marker id="dorn-axis-arrow" viewBox="0 0 10 10" refX="8" refY="5"
+            markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#999999" />
+          </marker>
+        </defs>
+        <g opacity={0.25}>
+          {Array.from({ length: rings }, (_, i) => (
+            <circle key={i} cx={cx} cy={cy}
+              r={(maxR * (i + 1)) / rings}
+              fill="none" stroke="#2a2a2a" strokeWidth={1} />
+          ))}
+          {Array.from({ length: 12 }, (_, i) => {
+            const a = (i / 12) * 2 * Math.PI;
+            return (
+              <line key={i} x1={cx} y1={cy}
+                x2={cx + maxR * Math.cos(a)} y2={cy + maxR * Math.sin(a)}
+                stroke="#2a2a2a" strokeWidth={1} />
+            );
+          })}
+        </g>
+        <line x1={cx - maxR - 12} y1={cy} x2={cx + maxR + 14} y2={cy}
+          stroke="#999999" strokeWidth={1.5} markerEnd="url(#dorn-axis-arrow)" />
+        <line x1={cx} y1={cy + maxR + 12} x2={cx} y2={cy - maxR - 14}
+          stroke="#999999" strokeWidth={1.5} markerEnd="url(#dorn-axis-arrow)" />
+      </>
     );
   }
 
@@ -237,42 +257,130 @@ const Grid = ({ M, plotW, plotH, timing, yMin, yMax, geometryMode, width, height
   const toY = (y) => M.top  + ((yMax - y) / (yMax - yMin)) * plotH;
 
   return (
-    <g opacity={0.28}>
-      {/* Lignes verticales */}
+    <>
+      {/* Arrow marker defs */}
+      <defs>
+        <marker id="dorn-axis-arrow" viewBox="0 0 10 10" refX="8" refY="5"
+          markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#999999" />
+        </marker>
+      </defs>
+
+      {/* Grille de fond — très discrète */}
+      <g opacity={0.3}>
+        {Array.from({ length: N + 1 }, (_, i) => {
+          const x = timing.x_range.start + i * (timing.x_range.end - timing.x_range.start) / N;
+          return <line key={`v${i}`} x1={toX(x)} y1={M.top} x2={toX(x)} y2={M.top + plotH}
+            stroke="#1a1a1a" strokeWidth={1} />;
+        })}
+        {Array.from({ length: N + 1 }, (_, i) => {
+          const y = yMin + i * (yMax - yMin) / N;
+          return <line key={`h${i}`} x1={M.left} y1={toY(y)} x2={M.left + plotW} y2={toY(y)}
+            stroke="#1a1a1a" strokeWidth={1} />;
+        })}
+      </g>
+
+      {/* Labels X — lisibles */}
       {Array.from({ length: N + 1 }, (_, i) => {
         const x = timing.x_range.start + i * (timing.x_range.end - timing.x_range.start) / N;
         return (
-          <g key={`v${i}`}>
-            <line x1={toX(x)} y1={M.top} x2={toX(x)} y2={M.top + plotH} stroke="#1e1e1e" strokeWidth={1} />
-            <text x={toX(x)} y={M.top + plotH + 22} fill="#383838" fontSize={14} textAnchor="middle">
-              {x.toFixed(1)}
-            </text>
-          </g>
+          <text key={`lx${i}`} x={toX(x)} y={M.top + plotH + 22}
+            fill="#888888" fontSize={13} textAnchor="middle">
+            {x.toFixed(1)}
+          </text>
         );
       })}
 
-      {/* Lignes horizontales */}
+      {/* Labels Y — lisibles */}
       {Array.from({ length: N + 1 }, (_, i) => {
         const y = yMin + i * (yMax - yMin) / N;
         return (
-          <g key={`h${i}`}>
-            <line x1={M.left} y1={toY(y)} x2={M.left + plotW} y2={toY(y)} stroke="#1e1e1e" strokeWidth={1} />
-            <text x={M.left - 6} y={toY(y) + 5} fill="#383838" fontSize={13} textAnchor="end">
-              {y.toFixed(2)}
-            </text>
-          </g>
+          <text key={`ly${i}`} x={M.left - 8} y={toY(y) + 5}
+            fill="#888888" fontSize={12} textAnchor="end">
+            {y.toFixed(2)}
+          </text>
         );
       })}
 
-      {/* Axe X (y=0) */}
+      {/* Axe Y — bordure gauche visible avec flèche */}
+      <line
+        x1={M.left} y1={M.top + plotH + 8}
+        x2={M.left} y2={M.top - 16}
+        stroke="#999999" strokeWidth={1.5}
+        markerEnd="url(#dorn-axis-arrow)"
+      />
+
+      {/* Axe X — bordure basse visible avec flèche */}
+      <line
+        x1={M.left - 8} y1={M.top + plotH}
+        x2={M.left + plotW + 16} y2={M.top + plotH}
+        stroke="#999999" strokeWidth={1.5}
+        markerEnd="url(#dorn-axis-arrow)"
+      />
+
+      {/* Croisement y=0 (si dans le range) — tirets discrets */}
       {yMin <= 0 && yMax >= 0 && (
-        <line x1={M.left} y1={toY(0)} x2={M.left + plotW} y2={toY(0)} stroke="#3a3a3a" strokeWidth={1.5} />
+        <line x1={M.left} y1={toY(0)} x2={M.left + plotW} y2={toY(0)}
+          stroke="#444444" strokeWidth={1} strokeDasharray="4,4" />
       )}
 
-      {/* Axe Y (x=0) */}
+      {/* Croisement x=0 (si dans le range) — tirets discrets */}
       {timing.x_range.start <= 0 && timing.x_range.end >= 0 && (
-        <line x1={toX(0)} y1={M.top} x2={toX(0)} y2={M.top + plotH} stroke="#3a3a3a" strokeWidth={1.5} />
+        <line x1={toX(0)} y1={M.top} x2={toX(0)} y2={M.top + plotH}
+          stroke="#444444" strokeWidth={1} strokeDasharray="4,4" />
       )}
-    </g>
+    </>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CURVELABEL — affiche le nom de l'équation au tip de la courbe
+// Apparaît dès les premières frames, suit la tête de tracé
+// ─────────────────────────────────────────────────────────────────────────────
+const CurveLabel = ({ curve, frame, timing, toCanvasX, toCanvasY, geometryMode }) => {
+  const { math_input, render_style, animation_speed, label } = curve;
+  const color    = render_style?.color_hex ?? "#00FFFF";
+  const revStyle = animation_speed?.reveal_style ?? "linear";
+  const pace     = animation_speed?.pace_factor  ?? 1.0;
+
+  const revealFrames =
+    (timing.x_range.end - timing.x_range.start) / timing.step_per_frame *
+    (timing.complexity_coefficient ?? 1.0);
+
+  const progress = computeRevealProgress(frame, revealFrames, revStyle, pace);
+  if (progress < 0.02) return null;
+
+  const xPos = timing.x_range.start + progress * (timing.x_range.end - timing.x_range.start);
+
+  let cx, cy;
+  if (geometryMode === "polar") {
+    const r = evalMath(math_input, xPos, geometryMode);
+    if (r === null) return null;
+    cx = toCanvasX(r * Math.cos(xPos));
+    cy = toCanvasY(r * Math.sin(xPos));
+  } else {
+    const y = evalMath(math_input, xPos, geometryMode);
+    if (y === null) return null;
+    cx = toCanvasX(xPos);
+    cy = toCanvasY(y);
+  }
+
+  if (!isFinite(cx) || !isFinite(cy)) return null;
+
+  const displayLabel = label || `y = ${math_input}`;
+
+  return (
+    <text
+      x={cx + 14}
+      y={cy - 10}
+      fill={color}
+      fontSize={15}
+      fontFamily="'Courier New', monospace"
+      fontWeight="bold"
+      opacity={0.92}
+      filter={`url(#glow-${curve.id})`}
+    >
+      {displayLabel}
+    </text>
   );
 };
