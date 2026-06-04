@@ -106,7 +106,7 @@ def upload_assets_to_release(f03_in: str, run_id: str, github_token: str, repo: 
     # Zipper et uploader les PNG trouves a la racine de f03_in/ (optionnel)
     png_files = [
         f for f in os.listdir(f03_in)
-        if f.lower().endswith(".png") and os.path.isfile(os.path.join(f03_in, f))
+        if f.lower().endswith((".png", ".jpg", ".jpeg")) and os.path.isfile(os.path.join(f03_in, f))
     ]
     if png_files:
         with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
@@ -126,9 +126,9 @@ def upload_assets_to_release(f03_in: str, run_id: str, github_token: str, repo: 
             "upload assets.zip",
         )
         os.unlink(zip_path)
-        print(f"[UPLOAD] assets.zip ({len(png_files)} PNG) — {zip_size / 1024:.1f} KB")
+        print(f"[UPLOAD] assets.zip ({len(png_files)} images) — {zip_size / 1024:.1f} KB")
     else:
-        print("[UPLOAD] Aucun PNG dans f03_in/ — assets.zip non genere.")
+        print("[UPLOAD] Aucun PNG/JPEG dans f03_in/ — assets.zip non genere.")
 
     print(f"[UPLOAD] Assets disponibles sur la Release {run_id}.")
     return release_url
