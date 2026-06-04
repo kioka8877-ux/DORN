@@ -269,6 +269,13 @@ QA : {'PASS' if qa_result[0] else 'FAIL — ' + str(qa_result[1])}</div>
 def main():
     parser = argparse.ArgumentParser(description="DRN F04B INWIT — FFmpeg Finishing")
     parser.add_argument("--drive-base", default=DEFAULT_DRIVE_BASE)
+    parser.add_argument(
+        "--speed", type=float, default=None,
+        help=(
+            "Vitesse de lecture override (ex: 0.5 = moitie, 2.0 = double). "
+            "Si fourni, speed_validated.json et plan_de_vol.json (OUT) ne sont pas requis."
+        ),
+    )
     args = parser.parse_args()
 
     log("=" * 62)
@@ -277,32 +284,46 @@ def main():
 
     p = paths(args.drive_base)
 
-    # Verification des entrees
-    checks = [
-        (p["video"], "video_render.mp4          (F03 OUT -> F04 IN)"),
-        (p["speed"], "speed_validated.json      (F04A OUT)"),
-        (p["plan"],  "plan_de_vol.json (OUT/)   (F04A OUT)"),
-    ]
-    for path, label in checks:
-        if not path.exists():
-            log(f"ERREUR : {label}")
-            log(f"         introuvable -> {path}")
+    # Verification des entrees obligatoires
+    if not p["video"].exists():
+        log("ERREUR : video_render.mp4 (F03 OUT -> F04 IN)")
+        log(f"         introuvable -> {p['video']}")
+        sys.exit(1)
+    log("OK : video_render.mp4")
+
+    # Vitesse : --speed override OU speed_validated.json
+    if args.speed is not None:
+        speed = args.speed
+        log(f"Vitesse forcee (--speed) : {speed}x")
+    else:
+        if not p["speed"].exists():
+            log("ERREUR : speed_validated.json (F04A OUT) introuvable.")
+            log("         Utiliser --speed <valeur> pour bypasser F04A.")
             sys.exit(1)
-        log(f"OK : {label}")
+        with open(p["speed"], encoding="utf-8") as f:
+            sv = json.load(f)
+        speed = float(sv["playback_speed"])
+        log(f"Vitesse figee (speed_validated.json) : {speed}x")
 
-    # Charger vitesse validee
-    with open(p["speed"], encoding="utf-8") as f:
-        sv = json.load(f)
-    speed = float(sv["playback_speed"])
-    log(f"Vitesse figee : {speed}x")
+    # Plan : OUT/plan_de_vol.json (F04A) ou IN/plan_de_vol.json (F03 OUT) ou defaults
+    meta = {"fps": 60, "format": "vertical", "title": "DORN", "date": date.today().isoformat()}
+    plan_path = p["plan"] if p["plan"].exists() else p["in"] / "plan_de_vol.json"
+    if plan_path.exists():
+        with open(plan_path, encoding="utf-8") as f:
+            plan = json.load(f)
+        concept = plan.get("concept_metadata", {})
+        meta.update({
+            "fps":    plan.get("timing", {}).get("fps", 60),
+            "format": concept.get("format", "vertical"),
+            "title":  concept.get("title", "DORN"),
+        })
+        log(f"Plan charge : {plan_path.name}")
+    else:
+        log("ATTENTION : aucun plan_de_vol.json trouve — utilisation des defaults (vertical, 60fps)")
 
-    # Charger plan complet
-    with open(p["plan"], encoding="utf-8") as f:
-        plan = json.load(f)
-    meta  = plan.get("concept_metadata", {})
     fmt   = meta.get("format", "vertical")
     title = meta.get("title", "DORN")
-    fps   = plan.get("timing", {}).get("fps", 60)
+    fps   = meta.get("fps", 60)
 
     meta["fps"]   = fps
     meta["title"] = title
