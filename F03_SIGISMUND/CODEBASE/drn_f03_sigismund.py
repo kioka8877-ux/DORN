@@ -101,7 +101,7 @@ def compute_y_range(plan: dict) -> tuple[float, float]:
             .replace("abs(",  "abs(")
             .replace("pi",    str(_m.pi))
         )
-        return _re.sub(r'\be\b', str(_m.e), result)
+        return _re.sub(r'e', str(_m.e), result)
 
     safe = {"__builtins__": {}, "_m": _m}
     for curve in curves:
@@ -138,7 +138,7 @@ def setup_public_assets(p: dict):
 def ensure_npm_install(codebase: Path):
     if not (codebase / "node_modules").exists():
         log("npm install …")
-        subprocess.run(["npm", "install", "--prefer-offline"], cwd=codebase, check=True)
+        subprocess.run(["npm", "install", "--no-audit", "--no-fund"], cwd=codebase, check=True)
     else:
         log("node_modules déjà présent — skip npm install")
 
@@ -212,7 +212,7 @@ def render_chunk(info: dict) -> dict:
         with open(os.path.join(pub_in, fname), "wb") as f:
             f.write(base64.b64decode(b64))
 
-    subprocess.run(["npm", "install", "--prefer-offline"], cwd=cb, check=True)
+    subprocess.run(["npm", "install", "--no-audit", "--no-fund"], cwd=cb, check=True)
 
     out_dir = os.path.join(cb, "OUT_CHUNKS")
     os.makedirs(out_dir, exist_ok=True)
@@ -255,7 +255,7 @@ def main():
 
     # Concat FFmpeg
     list_file = out_dir / "chunks.txt"
-    list_file.write_text("\\n".join(f"file \\'{{c}}\\'" for c in chunk_paths))
+    list_file.write_text("\n".join(f"file \'{{c}}\'" for c in chunk_paths))
     final = "{final_video}"
     subprocess.run([
         "ffmpeg", "-y", "-f", "concat", "-safe", "0",
