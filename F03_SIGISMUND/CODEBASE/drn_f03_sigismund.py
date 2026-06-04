@@ -128,9 +128,10 @@ def setup_public_assets(p: dict):
     public_in = p["codebase"] / "public" / "IN"
     public_in.mkdir(parents=True, exist_ok=True)
     count = 0
-    for png in p["in"].glob("*.png"):
-        shutil.copy2(png, public_in / png.name)
-        count += 1
+    for ext in ("*.png", "*.jpg", "*.jpeg", "*.PNG", "*.JPG", "*.JPEG"):
+        for img in p["in"].glob(ext):
+            shutil.copy2(img, public_in / img.name)
+            count += 1
     if count:
         log(f"{count} PNG copiés → {public_in}")
 
@@ -284,8 +285,9 @@ def render_modal(p: dict, plan: dict, total_frames: int, y_min: float, y_max: fl
 
     # Assets PNG
     assets_b64 = {}
-    for png in p["in"].glob("*.png"):
-        assets_b64[png.name] = base64.b64encode(png.read_bytes()).decode()
+    for ext in ("*.png", "*.jpg", "*.jpeg", "*.PNG", "*.JPG", "*.JPEG"):
+        for img in p["in"].glob(ext):
+            assets_b64[img.name] = base64.b64encode(img.read_bytes()).decode()
 
     N_WORKERS = 3
     chunk_size = total_frames // N_WORKERS
