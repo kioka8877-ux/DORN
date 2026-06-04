@@ -3,13 +3,18 @@ DRN F03 SIGISMUND — Remotion SVG Neon Renderer
 PENTERACT DORN V3 — VIIe Légion
 
 Modes :
-  --mode direct  → rendu direct Remotion (1 worker, Colab GPU-less)
-  --mode modal   → rendu chunké Modal (3 workers parallèles, hérité CRUSADER)
+  --mode direct   → rendu direct Remotion (1 worker, Colab GPU-less)
+  --mode modal    → rendu chunke Modal (3 workers paralleles, herite CRUSADER)
+  --mode github   → rendu distribue GitHub Actions (10 workers, image Docker ghcr.io)
 
-Prérequis :
-  - npm + Node.js installés dans le Colab runtime
+Prerequis communs :
   - plan_de_vol.json dans F03_SIGISMUND/IN/ avec validated_by_magos: true
-  - images PNG dans F03_SIGISMUND/IN/ (si tracking_target utilisé)
+  - images PNG dans F03_SIGISMUND/IN/ (si tracking_target utilise)
+
+Prerequis mode github :
+  - --github-token  : PAT avec permissions repo + packages:write
+  - --repo          : ex. kioka8877-ux/DORN
+  - Secret GH_TOKEN configure dans Settings → Secrets → Actions du repo
 """
 
 import argparse
@@ -328,22 +333,74 @@ def render_modal(p: dict, plan: dict, total_frames: int, y_min: float, y_max: fl
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# MODE GITHUB (10 workers GitHub Actions)
+# ─────────────────────────────────────────────────────────────────────────────
+def render_github(p: dict, plan: dict, total_frames: int, github_token: str, repo: str):
+    log("Mode : rendu GitHub Actions (10 workers)")
+    import time as _time
+    from drn_f03_gh_trigger import (
+        upload_assets_to_release,
+        ensure_docker_image,
+        trigger_workflow,
+        poll_run_status,
+        download_final_artifact,
+    )
+
+    run_id = f"drn-{int(_time.time())}"
+    fps    = plan.get("timing", {}).get("fps", 60)
+    log(f"Run ID : {run_id} | fps={fps} | total_frames={total_frames}")
+
+    # Etape 1 : Upload assets vers GitHub Release temporaire
+    log("--- Etape 1/5 : Upload assets ---")
+    upload_assets_to_release(str(p["in"]), run_id, github_token, repo)
+
+    # Etape 2 : Verifier / builder l'image Docker
+    log("--- Etape 2/5 : Image Docker ---")
+    ok = ensure_docker_image(github_token, repo)
+    if not ok:
+        log("ERREUR : image Docker indisponible — aborter")
+        sys.exit(1)
+
+    # Etape 3 : Declencher le workflow
+    log("--- Etape 3/5 : Declenchement workflow ---")
+    gh_run_id = trigger_workflow(run_id, fps, "Main", total_frames, github_token, repo)
+
+    # Etape 4 : Polling jusqu'a completion
+    log("--- Etape 4/5 : Polling ---")
+    poll_run_status(gh_run_id, github_token, repo)
+
+    # Etape 5 : Telecharger l'artifact final
+    log("--- Etape 5/5 : Telechargement ---")
+    p["out"].mkdir(parents=True, exist_ok=True)
+    out_path = download_final_artifact(gh_run_id, run_id, github_token, repo, str(p["out"]))
+    log(f"Rendu GitHub termine  →  {out_path}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # ENTRÉE PRINCIPALE
 # ─────────────────────────────────────────────────────────────────────────────
 def main():
     parser = argparse.ArgumentParser(description="DRN F03 SIGISMUND — Remotion Renderer")
     parser.add_argument(
-        "--mode", choices=["direct", "modal"], default="direct",
-        help="direct = 1 worker Colab | modal = 3 workers Modal (hérité CRUSADER)",
+        "--mode", choices=["direct", "modal", "github"], default="direct",
+        help="direct = 1 worker Colab | modal = 3 workers Modal | github = 10 workers GitHub Actions",
     )
     parser.add_argument(
         "--drive-base", default=DEFAULT_DRIVE_BASE,
-        help="Chemin de base Google Drive (défaut : DRIVE_DORN)",
+        help="Chemin de base Google Drive (defaut : DRIVE_DORN)",
+    )
+    parser.add_argument(
+        "--github-token", default=None,
+        help="PAT GitHub (requis pour --mode github)",
+    )
+    parser.add_argument(
+        "--repo", default="kioka8877-ux/DORN",
+        help="Repo GitHub owner/name (defaut : kioka8877-ux/DORN)",
     )
     args = parser.parse_args()
 
     log("=" * 62)
-    log("DRN F03 SIGISMUND — Démarrage")
+    log("DRN F03 SIGISMUND — Demarrage")
     log("=" * 62)
 
     p            = paths(args.drive_base)
@@ -354,6 +411,11 @@ def main():
 
     if args.mode == "modal":
         render_modal(p, plan, total_frames, y_min, y_max)
+    elif args.mode == "github":
+        if not args.github_token:
+            log("ERREUR : --github-token requis pour --mode github")
+            sys.exit(1)
+        render_github(p, plan, total_frames, args.github_token, args.repo)
     else:
         render_direct(p, plan, total_frames, y_min, y_max)
 

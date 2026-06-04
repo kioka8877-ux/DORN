@@ -1,0 +1,267 @@
+name: F03 SIGISMUND — Remotion Render
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Identifiant unique du run (ex: drn-1717200000)"
+        required: true
+      fps:
+        description: "FPS de la composition"
+        required: false
+        default: "60"
+      total_frames:
+        description: "Nombre total de frames"
+        required: true
+
+jobs:
+
+  # ── PREFLIGHT ──────────────────────────────────────────────────────────────
+  preflight:
+    name: "Preflight (frames 0-5-9)"
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/kioka8877-ux/dorn-remotion:latest
+    timeout-minutes: 12
+
+    outputs:
+      go: ${{ steps.verdict.outputs.go }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup deps
+        run: |
+          cp -r $DORN_DEPS/node_modules F03_SIGISMUND/CODEBASE/
+
+      - name: Telecharger assets depuis GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          BASE_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.event.inputs.run_id }}"
+          mkdir -p F03_SIGISMUND/CODEBASE/public/IN
+
+          # plan_de_vol.json (obligatoire)
+          wget -q --header="Authorization: token $GH_TOKEN" \
+            -O F03_SIGISMUND/CODEBASE/public/IN/plan_de_vol.json \
+            "${BASE_URL}/plan_de_vol.json" && \
+            echo "[ASSETS] plan_de_vol.json OK" || \
+            { echo "[ASSETS] plan_de_vol.json ABSENT — ABORT"; exit 1; }
+
+          # assets.zip (optionnel — PNG tracking)
+          if wget -q --header="Authorization: token $GH_TOKEN" \
+            -O /tmp/assets.zip "${BASE_URL}/assets.zip" 2>/dev/null; then
+            unzip -q /tmp/assets.zip -d F03_SIGISMUND/CODEBASE/public/IN/
+            echo "[ASSETS] assets.zip extrait"
+          else
+            echo "[ASSETS] Pas d'assets.zip — continue sans PNG"
+          fi
+
+      - name: Generer props.json
+        run: |
+          cd F03_SIGISMUND/CODEBASE
+          node -e "
+            const fs = require('fs');
+            const {evaluate} = require('./node_modules/mathjs');
+            const plan = JSON.parse(fs.readFileSync('public/IN/plan_de_vol.json','utf8'));
+            const t = plan.timing;
+            const geo = plan.space_environment.geometry_mode;
+            const xS = t.x_range.start, xE = t.x_range.end;
+            let yMin=Infinity, yMax=-Infinity;
+            for(const c of plan.reactor_curves){
+              for(let i=0;i<=300;i++){
+                const x = xS + i*(xE-xS)/300;
+                try{
+                  let y;
+                  if(geo==='polar'){const r=evaluate(c.math_input,{x,t:x});y=r*Math.sin(x);}
+                  else{y=evaluate(c.math_input,{x,t:x});}
+                  if(isFinite(y)){if(y<yMin)yMin=y;if(y>yMax)yMax=y;}
+                }catch(e){}
+              }
+            }
+            if(!isFinite(yMin)){yMin=-2;yMax=2;}
+            const range=Math.abs(yMax-yMin)||2;const pad=range*0.12;
+            yMin-=pad;yMax+=pad;
+            const reveal=(xE-xS)/t.step_per_frame;
+            const totalFrames=Math.ceil(reveal*(t.complexity_coefficient||1))+(t.final_freeze_frames||180);
+            const props={planDeVol:plan,computed:{yMin,yMax,totalFrames}};
+            fs.writeFileSync('public/props.json',JSON.stringify(props));
+            console.log('[PROPS] totalFrames='+totalFrames+' yRange=['+yMin.toFixed(2)+','+yMax.toFixed(2)+']');
+          "
+
+      - name: Preflight render (frames 0, 5, 9)
+        working-directory: F03_SIGISMUND/CODEBASE
+        run: |
+          CHROME=$(which chromium-browser 2>/dev/null || which chromium 2>/dev/null || echo "$CHROMIUM_PATH")
+          mkdir -p /tmp/preflight_frames
+
+          for FRAME in 0 5 9; do
+            npx remotion still \
+              src/index.jsx Main \
+              /tmp/preflight_frames/frame_${FRAME}.png \
+              --frame=${FRAME} \
+              --gl=swangle \
+              --timeout=60000 \
+              --props="$(cat public/props.json)" \
+              ${CHROME:+--browser-executable=$CHROME}
+          done
+
+      - name: Verdict Go / No-Go
+        id: verdict
+        run: |
+          OK=0
+          for FRAME in 0 5 9; do
+            F="/tmp/preflight_frames/frame_${FRAME}.png"
+            if [ -f "$F" ] && [ $(stat -c%s "$F") -gt 10000 ]; then
+              OK=$((OK + 1))
+            fi
+          done
+          if [ "$OK" -ge 3 ]; then
+            echo "go=true" >> $GITHUB_OUTPUT
+            echo "[PREFLIGHT] GO — 3/3 frames OK"
+          else
+            echo "go=false" >> $GITHUB_OUTPUT
+            echo "[PREFLIGHT] NO-GO — ${OK}/3"
+            exit 1
+          fi
+
+      - name: Upload preflight
+        uses: actions/upload-artifact@v4
+        with:
+          name: preflight-frames
+          path: /tmp/preflight_frames/
+          retention-days: 1
+
+
+  # ── RENDER 10 WORKERS ─────────────────────────────────────────────────────
+  render:
+    name: "Chunk ${{ matrix.chunk }}"
+    needs: preflight
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/kioka8877-ux/dorn-remotion:latest
+    timeout-minutes: 15
+
+    strategy:
+      matrix:
+        chunk: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      fail-fast: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup deps + assets
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          cp -r $DORN_DEPS/node_modules F03_SIGISMUND/CODEBASE/
+          BASE_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.event.inputs.run_id }}"
+          mkdir -p F03_SIGISMUND/CODEBASE/public/IN
+          wget -q --header="Authorization: token $GH_TOKEN" \
+            -O F03_SIGISMUND/CODEBASE/public/IN/plan_de_vol.json \
+            "${BASE_URL}/plan_de_vol.json"
+          wget -q --header="Authorization: token $GH_TOKEN" \
+            -O /tmp/assets.zip "${BASE_URL}/assets.zip" 2>/dev/null && \
+            unzip -q /tmp/assets.zip -d F03_SIGISMUND/CODEBASE/public/IN/ || true
+
+      - name: Generer props.json
+        run: |
+          cd F03_SIGISMUND/CODEBASE
+          node -e "
+            const fs=require('fs');const{evaluate}=require('./node_modules/mathjs');
+            const plan=JSON.parse(fs.readFileSync('public/IN/plan_de_vol.json','utf8'));
+            const t=plan.timing;const geo=plan.space_environment.geometry_mode;
+            const xS=t.x_range.start,xE=t.x_range.end;
+            let yMin=Infinity,yMax=-Infinity;
+            for(const c of plan.reactor_curves){for(let i=0;i<=300;i++){const x=xS+i*(xE-xS)/300;try{let y;if(geo==='polar'){const r=evaluate(c.math_input,{x,t:x});y=r*Math.sin(x);}else{y=evaluate(c.math_input,{x,t:x});}if(isFinite(y)){if(y<yMin)yMin=y;if(y>yMax)yMax=y;}}catch(e){}}}
+            if(!isFinite(yMin)){yMin=-2;yMax=2;}const range=Math.abs(yMax-yMin)||2;const pad=range*0.12;yMin-=pad;yMax+=pad;
+            const reveal=(xE-xS)/t.step_per_frame;const totalFrames=Math.ceil(reveal*(t.complexity_coefficient||1))+(t.final_freeze_frames||180);
+            fs.writeFileSync('public/props.json',JSON.stringify({planDeVol:plan,computed:{yMin,yMax,totalFrames}}));
+          "
+
+      - name: Calculer plage de frames
+        id: frames
+        run: |
+          CHUNK=${{ matrix.chunk }}
+          TOTAL=${{ github.event.inputs.total_frames }}
+          BASE=$((TOTAL / 10))
+          START=$((CHUNK * BASE))
+          if [ "$CHUNK" -eq 9 ]; then END=$((TOTAL - 1)); else END=$((START + BASE - 1)); fi
+          echo "start=$START" >> $GITHUB_OUTPUT
+          echo "end=$END" >> $GITHUB_OUTPUT
+
+      - name: Render chunk (BYPASS COMPOSITOR)
+        working-directory: F03_SIGISMUND/CODEBASE
+        run: |
+          CHROME=$(which chromium-browser 2>/dev/null || which chromium 2>/dev/null || echo "$CHROMIUM_PATH")
+          FRAMES_DIR=/tmp/frames_${{ matrix.chunk }}
+          mkdir -p $FRAMES_DIR
+
+          # Etape 1 : render sequence JPEG (pas de compositor = pas de hang)
+          npx remotion render \
+            src/index.jsx Main \
+            $FRAMES_DIR \
+            --sequence \
+            --image-format=jpeg \
+            --gl=swangle \
+            --frames=${{ steps.frames.outputs.start }}-${{ steps.frames.outputs.end }} \
+            --concurrency=1 \
+            --timeout=60000 \
+            --props="$(cat public/props.json)" \
+            ${CHROME:+--browser-executable=$CHROME}
+
+          # Etape 2 : encode JPEG → mp4 via FFmpeg
+          ffmpeg -y \
+            -framerate ${{ github.event.inputs.fps }} \
+            -pattern_type glob -i "$FRAMES_DIR/*.jpeg" \
+            -c:v libx264 -preset fast -crf 18 \
+            -pix_fmt yuv420p \
+            /tmp/chunk_${{ matrix.chunk }}.mp4
+
+      - name: Upload chunk
+        uses: actions/upload-artifact@v4
+        with:
+          name: chunk-${{ matrix.chunk }}
+          path: /tmp/chunk_${{ matrix.chunk }}.mp4
+          retention-days: 1
+
+
+  # ── CONCAT FINAL ──────────────────────────────────────────────────────────
+  concat:
+    name: "Concat Final"
+    needs: render
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Verifier FFmpeg
+        run: |
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update -qq && sudo apt-get install -y ffmpeg
+          fi
+
+      - name: Telecharger chunks
+        uses: actions/download-artifact@v4
+        with:
+          pattern: chunk-*
+          merge-multiple: true
+          path: /tmp/chunks
+
+      - name: Assemblage FFmpeg
+        run: |
+          for i in 0 1 2 3 4 5 6 7 8 9; do
+            echo "file '/tmp/chunks/chunk_${i}.mp4'" >> /tmp/concat_list.txt
+          done
+          ffmpeg -y -f concat -safe 0 -i /tmp/concat_list.txt \
+            -c:v copy -an /tmp/video_render.mp4
+          SIZE=$(du -h /tmp/video_render.mp4 | cut -f1)
+          echo "[CONCAT] video_render.mp4 — ${SIZE}"
+
+      - name: Upload video finale
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultat-final
+          path: /tmp/video_render.mp4
+          retention-days: 7
