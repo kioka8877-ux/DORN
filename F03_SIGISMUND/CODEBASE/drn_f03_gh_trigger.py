@@ -103,17 +103,23 @@ def upload_assets_to_release(f03_in: str, run_id: str, github_token: str, repo: 
     )
     print(f"[UPLOAD] plan_de_vol.json — {len(data) / 1024:.1f} KB")
 
-    # Zipper et uploader les PNG trouves a la racine de f03_in/ (optionnel)
-    png_files = [
-        f for f in os.listdir(f03_in)
-        if f.lower().endswith((".png", ".jpg", ".jpeg")) and os.path.isfile(os.path.join(f03_in, f))
-    ]
-    if png_files:
+    # Zipper et uploader les images (PNG/JPG/JPEG) recursivement dans f03_in/
+    IMG_EXTS = (".png", ".jpg", ".jpeg")
+    img_files = []
+    for dirpath, _, filenames in os.walk(f03_in):
+        for fname in filenames:
+            if fname.lower().endswith(IMG_EXTS):
+                abs_path = os.path.join(dirpath, fname)
+                rel_path = os.path.relpath(abs_path, f03_in)
+                img_files.append((abs_path, rel_path))
+    img_files.sort(key=lambda x: x[1])
+
+    if img_files:
         with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
             zip_path = tmp.name
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-            for png_name in sorted(png_files):
-                zf.write(os.path.join(f03_in, png_name), png_name)
+            for abs_path, rel_path in img_files:
+                zf.write(abs_path, rel_path)
         zip_size = os.path.getsize(zip_path)
         with open(zip_path, "rb") as f:
             data = f.read()
@@ -126,9 +132,9 @@ def upload_assets_to_release(f03_in: str, run_id: str, github_token: str, repo: 
             "upload assets.zip",
         )
         os.unlink(zip_path)
-        print(f"[UPLOAD] assets.zip ({len(png_files)} images) — {zip_size / 1024:.1f} KB")
+        print(f"[UPLOAD] assets.zip ({len(img_files)} images) — {zip_size / 1024:.1f} KB")
     else:
-        print("[UPLOAD] Aucun PNG/JPEG dans f03_in/ — assets.zip non genere.")
+        print("[UPLOAD] Aucune image dans f03_in/ — assets.zip non genere.")
 
     print(f"[UPLOAD] Assets disponibles sur la Release {run_id}.")
     return release_url
