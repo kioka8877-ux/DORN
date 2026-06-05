@@ -10,7 +10,7 @@
 | Frégate | Nom | Rôle | Statut | Date de Scellement |
 |---------|-----|------|--------|--------------------|
 | F01 | POLUX | Oracle & Curation → plan_de_vol.json | SCELLÉ ✓ | 2026-05-31 |
-| F02 | CASTELLAN | HUD Contrôle + Sim. → plan_de_vol.json (figé) | EN FORGE | — |
+| F02 | CASTELLAN | HUD Contrôle + Sim. → plan_de_vol.json (figé) | SCELLÉ ✓ | 2026-06-05 |
 | F03 | SIGISMUND | Réacteur Multi-Formes → video_render.mp4 | SCELLÉ ✓ | 2026-06-05 |
 | F04A | INWIT | Viewer + Speed Control | EN FORGE | — |
 | F04B | INWIT | FFmpeg Finishing → youtube_*.mp4 | EN FORGE | — |
@@ -19,10 +19,38 @@
 
 **Compteur de Guerre :**
 ```
-[██░░] 2/4 frégates scellées
+[███░] 3/4 frégates scellées
 [░░]   0/2 metaprompts scellés
-[██░░] 2/4 tests de production réussis
+[███░] 3/4 tests de production réussis
 ```
+
+---
+
+## CAMP_04 — TEST DE PRODUCTION F02 — 2026-06-05
+
+### F02 CASTELLAN — Test de Production
+
+| # | Cellule | Résultat | Note |
+|---|---------|----------|------|
+| 1 | Streamlit + Canvas JS — lancement | ✓ OK | Interface HUD opérationnelle |
+| 2 | Chargement plan_de_vol.json | ✓ OK | Lecture + validation JSON |
+| 3 | Simulation courbes math.js | ✓ OK | Rendu Canvas temps réel |
+| 4 | Injection camera_plan | ✓ OK | Bloc caméra intégré au JSON |
+| 5 | validated_by_magos: true — sauvegarde | ✓ OK | JSON figé et signé |
+| 6 | CRS_CUSTOS check-out F02 | ✓ OK | Transit F02→F03 autorisé |
+
+**F02 CASTELLAN — SCELLÉ. PAR LA VOLONTÉ DE L'EMPEREUR ET DE ROGAL DORN.**
+
+> *"Hold the line. Every wall is sacred."* — Castellan des Fists Impériaux
+
+### Fil d'Ariane — 2026-06-05
+
+| Date | Frégate | Phase | Action | Validé |
+|------|---------|-------|--------|--------|
+| 2026-06-05 | F02 | PROD | Test de production complet — 6 cellules | ✓ |
+| 2026-06-05 | F02 | PROD | validated_by_magos: true — JSON figé | ✓ |
+| 2026-06-05 | F02 | PROD | CRS_CUSTOS check-out F02 — OK | ✓ |
+| 2026-06-05 | F02 | SCELLEMENT | F02 CASTELLAN scellé | ✓ |
 
 ---
 
@@ -204,6 +232,7 @@ Ils ont été validés en conditions de production réelles dans CRUSADER.
 
 | Date | Frégate | Phase | Action | Validé |
 |------|---------|-------|--------|--------|
+| 2026-06-05 | F02 | PROD | Test de production complet — SCELLÉ | ✓ |
 | 2026-06-05 | F03 | PROD | Test de production complet — SCELLÉ | ✓ |
 | 2026-06-05 | F03 | PROD | Bugfix #7 : images PNG/JPEG → public/IN/ | ✓ |
 | 2026-05-31 | F01 | PROD | Test de production complet — SCELLÉ | ✓ |
@@ -227,11 +256,12 @@ Ils ont été validés en conditions de production réelles dans CRUSADER.
 - Statut : **SCELLÉ — 2026-05-31**
 - Test de production : **RÉUSSI**
 
-## F02 — CASTELLAN
+## F02 — CASTELLAN ✓ SCELLÉ
 - Rôle : HUD Streamlit + Canvas JS, simulation courbes, validation JSON
 - Stack : Streamlit + math.js CDN + Canvas JS
 - IN: plan_de_vol.json + images/*.png | OUT: plan_de_vol.json (figé, validated_by_magos)
-- Statut : EN FORGE
+- Statut : **SCELLÉ — 2026-06-05**
+- Test de production : **RÉUSSI**
 
 ## F03 — SIGISMUND ✓ SCELLÉ
 - Rôle : Rendu Remotion SVG neon 60fps (timing dynamique)
@@ -246,7 +276,7 @@ Ils ont été validés en conditions de production réelles dans CRUSADER.
 - Rôle : F04A = viewer HTML Colab + sélecteur vitesse ; F04B = FFmpeg finishing
 - Stack : HTML/JS natif + FFmpeg
 - IN: video_render.mp4 + plan_de_vol.json | OUT: youtube_short/long.mp4
-- Statut : EN FORGE
+- Statut : EN FORGE — PROCHAINE CIBLE
 - Note : Pipeline FFmpeg hérité de F04 HELBRECHT CRUSADER + setpts conditionnel (nouveau)
 
 ## METAPROMPTS
