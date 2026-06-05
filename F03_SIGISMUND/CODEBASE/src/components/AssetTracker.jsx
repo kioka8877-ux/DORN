@@ -1,11 +1,12 @@
 import React from "react";
+import { staticFile } from "remotion";
 import { evalMath, computeRevealProgress, computeSlope } from "./MathInterpreter";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// AssetTracker — suit une image PNG le long d'une courbe
+// AssetTracker — suit une image PNG/JPEG le long d'une courbe
 // Rotation automatique selon la pente (auto_rotate_slope)
 // Inertia smoothing : amortit légèrement la position (inertia_smooth)
-// Le fichier PNG doit être accessible depuis src/public/IN/<asset_filename>
+// Le fichier (PNG ou JPEG) doit être accessible depuis src/public/IN/<asset_filename>
 // ─────────────────────────────────────────────────────────────────────────────
 export const AssetTracker = ({
   curve,
@@ -69,9 +70,10 @@ export const AssetTracker = ({
 
   const size = 80 * scale_factor;
 
-  // Remotion cherche les assets statiques dans le dossier public/
-  // Le notebook copie les PNG de IN/ → CODEBASE/public/IN/
-  const src = `/IN/${asset_filename}`;
+  // staticFile() resout correctement le chemin en dev ET en rendu headless.
+  // Supporte PNG et JPEG (asset_filename = "image.png" ou "image.jpg"/".jpeg").
+  // Le notebook copie les images de IN/ → CODEBASE/public/IN/ avant le rendu.
+  const src = staticFile(`IN/${asset_filename}`);
 
   return (
     <g transform={`translate(${cx.toFixed(1)}, ${cy.toFixed(1)}) rotate(${rotateDeg.toFixed(2)})`}>
