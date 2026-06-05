@@ -119,7 +119,7 @@ def upload_assets_to_release(f03_in: str, run_id: str, github_token: str, repo: 
             zip_path = tmp.name
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
             for abs_path, rel_path in img_files:
-                zf.write(abs_path, rel_path)
+                zf.write(abs_path, os.path.basename(abs_path))  # flat: ignore subdirs, asset_filename doit correspondre au nom seul
         zip_size = os.path.getsize(zip_path)
         with open(zip_path, "rb") as f:
             data = f.read()
@@ -132,7 +132,7 @@ def upload_assets_to_release(f03_in: str, run_id: str, github_token: str, repo: 
             "upload assets.zip",
         )
         os.unlink(zip_path)
-        print(f"[UPLOAD] assets.zip ({len(img_files)} images) — {zip_size / 1024:.1f} KB")
+        print(f"[UPLOAD] assets.zip ({len(img_files)} images) — {zip_size / 1024:.1f} KB [paths: {[os.path.basename(p) for p,_ in img_files]}]")
     else:
         print("[UPLOAD] Aucune image dans f03_in/ — assets.zip non genere.")
 
