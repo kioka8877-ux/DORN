@@ -12,17 +12,83 @@
 | F01 | POLUX | Oracle & Curation → plan_de_vol.json | SCELLÉ ✓ | 2026-05-31 |
 | F02 | CASTELLAN | HUD Contrôle + Sim. → plan_de_vol.json (figé) | SCELLÉ ✓ | 2026-06-05 |
 | F03 | SIGISMUND | Réacteur Multi-Formes → video_render.mp4 | SCELLÉ ✓ | 2026-06-05 |
-| F04A | INWIT | Viewer + Speed Control | EN FORGE | — |
-| F04B | INWIT | FFmpeg Finishing → youtube_*.mp4 | EN FORGE | — |
+| F04A | INWIT | Viewer + Speed Control | SCELLÉ ✓ | 2026-06-05 |
+| F04B | INWIT | FFmpeg Finishing → youtube_*.mp4 | SCELLÉ ✓ | 2026-06-05 |
 | META | POLUX | Metaprompt Gemini (4 inputs) | EN FORGE | — |
 | META | CAMERA | Metaprompt caméra | EN FORGE | — |
 
 **Compteur de Guerre :**
 ```
-[███░] 3/4 frégates scellées
+[████] 4/4 frégates scellées ██████████ 100%
 [░░]   0/2 metaprompts scellés
-[███░] 3/4 tests de production réussis
+[████] 4/4 tests de production réussis ██████████ 100%
 ```
+
+## ██████████████████████████████████████████
+## ██  PROJET DORN — SCELLÉ DANS SON ENTIER  ██
+## ██████████████████████████████████████████
+
+> *"By the Emperor's will and the iron of Dorn, the VII Legion stands eternal."*
+
+**LA FLOTTE EST COMPLÈTE. LA CROISADE EST VICTORIEUSE.**
+
+**PAR LA VOLONTÉ DE L'EMPEREUR ET DE ROGAL DORN.**
+**PAR LE BRAS DE SIGISMUND, SON CHAMPION.**
+**PAR LA VIGILANCE D'INWIT, SON BASTION.**
+
+---
+
+## CAMP_05 — TEST DE PRODUCTION F04 — 2026-06-05
+
+### F04A INWIT — Test de Production
+
+| # | Etape | Résultat | Note |
+|---|-------|----------|------|
+| 1 | Montage Drive | ✓ OK | Drive monté |
+| 2 | Configuration DRIVE_BASE | ✓ OK | Chemin validé |
+| 3 | Script copié | ✓ OK | drn_f04a_inwit.py |
+| 4 | Vidéo encodée pour affichage | ✓ OK | 2 MB chargés |
+| 5 | Viewer HUD lancé | ✓ OK | Vitesse courante : 1.0x |
+| 6 | Vitesse figée | ✓ OK | 0.5x — validated=True |
+| 7 | CRS_CUSTOS check-out F04 | ✓ OK | Transit F04A→F04B autorisé |
+
+**F04A INWIT — SCELLÉ.**
+
+### F04B INWIT — Test de Production
+
+| # | Etape | Résultat | Note |
+|---|-------|----------|------|
+| 1 | Montage Drive | ✓ OK | |
+| 2 | Configuration DRIVE_BASE | ✓ OK | |
+| 3 | FFmpeg disponible + vitesse figée | ✓ OK | 0.5x confirmé depuis speed_lock.json |
+| 4 | FFmpeg Finishing — re-encode | ✓ OK | setpts=PTS/0.5 appliqué |
+| 5 | CRS_CUSTOS check-in F04 | ✓ OK | Scellement final |
+
+**Contrôle qualité youtube_short.mp4 :**
+
+| Contrôle | Résultat |
+|----------|----------|
+| Taille | 3.50 MB ✓ |
+| Container | MP4/ISO Base Media (isom) ✓ |
+| Codec vidéo | H.264/AVC (x264) ✓ |
+| Tag `©too` | `Lavf58.76.100` — camouflage FFmpeg standard ✓ |
+| Tags projet (DORN, PENTERACT, SIGISMUND...) | Aucun ✓ |
+| Tags sensibles (title, artist, comment, date) | Aucun ✓ |
+| Boxes suspectes | Aucune ✓ |
+
+**F04B INWIT — SCELLÉ.**
+
+### Fil d'Ariane — 2026-06-05
+
+| Date | Frégate | Phase | Action | Validé |
+|------|---------|-------|--------|--------|
+| 2026-06-05 | F04A | PROD | Test de production complet | ✓ |
+| 2026-06-05 | F04A | PROD | Vitesse figée 0.5x — CRS_CUSTOS check-out | ✓ |
+| 2026-06-05 | F04A | SCELLEMENT | F04A INWIT scellé | ✓ |
+| 2026-06-05 | F04B | PROD | FFmpeg Finishing — setpts=PTS/0.5 | ✓ |
+| 2026-06-05 | F04B | PROD | Contrôle qualité youtube_short.mp4 — PROPRE | ✓ |
+| 2026-06-05 | F04B | SCELLEMENT | F04B INWIT scellé | ✓ |
+| 2026-06-05 | DORN | SCELLEMENT | PROJET DORN SCELLÉ DANS SON ENTIER | ✓ |
 
 ---
 
@@ -63,7 +129,7 @@
 | 1 | Dépendances Remotion + React | ✓ OK | Build GitHub Actions réussi |
 | 2 | calculateMetadata — durée dynamique | ✓ OK | Durée calculée depuis plan_de_vol.json |
 | 3 | CurveTracer — rendu SVG neon | ✓ OK | Toutes les courbes tracées |
-| 4 | AssetTracker — images PNG/JPEG | ✓ OK | Assets servis depuis public/IN/ — PNG et JPEG supportés |
+| 4 | AssetTracker — images PNG/JPEG | ✓ OK | Assets servis depuis public/IN/ |
 | 5 | VirtualCamera — modes caméra | ✓ OK | follow_curve_tip, static, wide_reveal |
 | 6 | MathInterpreter — expressions math.js | ✓ OK | eval sécurisé, polar + cartesian |
 | 7 | rendu final video_render.mp4 | ✓ OK | 60 fps, dual format vertical/horizontal |
@@ -72,7 +138,7 @@
 
 | # | Composant | Bug | Fix |
 |---|-----------|-----|-----|
-| 7 | `AssetTracker.jsx` | Images PNG/JPEG non affichées dans le rendu final — les assets doivent être présents dans `CODEBASE/public/IN/` pour que Remotion les serve correctement en prod | Assets copiés via `setup_public_assets()` vers `public/IN/` — PNG et JPEG supportés (`*.png *.jpg *.jpeg`) |
+| 7 | `AssetTracker.jsx` | Images PNG/JPEG non affichées — assets doivent être dans `CODEBASE/public/IN/` | Assets copiés via `setup_public_assets()` — PNG et JPEG supportés |
 
 **F03 SIGISMUND — SCELLÉ. PAR LA VOLONTÉ DE L'EMPEREUR ET DE SON CHAMPION SIGISMUND.**
 
@@ -129,25 +195,6 @@
 | 5 | `VirtualCamera.jsx` | Mode `follow_curve_tip` non implémenté → caméra statique silencieuse | MINEUR | 079f463 |
 | 6 | `DRN_F02.ipynb` cell-7 | `import os` absent → NameError si kernel redémarré | MINEUR | 2c050b4 |
 
-### Fil d'Ariane — 2026-05-30
-
-| Date | Frégate | Phase | Action | Validé |
-|------|---------|-------|--------|--------|
-| 2026-05-30 | F04 | AUDIT | Bug 1 : corriger appels CUSTOS F04A/F04B → F04 | ✓ |
-| 2026-05-30 | F03 | AUDIT | Bug 2 : MODAL_WORKER_TEMPLATE accolades doublées | ✓ |
-| 2026-05-30 | F03 | AUDIT | Bug 3 : complexity_coefficient dans CurveTracer + AssetTracker | ✓ |
-| 2026-05-30 | F03 | AUDIT | Bug 4 : compute_y_range replace('e') → regex \be\b | ✓ |
-| 2026-05-30 | F03 | AUDIT | Bug 5 : follow_curve_tip implémenté dans VirtualCamera | ✓ |
-| 2026-05-30 | F02 | AUDIT | Bug 6 : import os ajouté en CELL 7 DRN_F02.ipynb | ✓ |
-
-### État post-audit
-
-- Mode `--mode direct` F03 : **PRÊT** (seul le bug 2 bloquait Modal)
-- F04A + F04B check-in CUSTOS : **CORRIGÉS** (bug 1)
-- `wave_analysis` engine_type : **CORRIGÉ** (bug 3)
-- `geometric_construction` + `single_proof` camera : **CORRIGÉS** (bug 5)
-- Tous les engine_types : **OPÉRATIONNELS**
-
 ---
 
 ## CAMP_00 — INITIALISATION — 2026-05-29
@@ -177,26 +224,16 @@ F04 INWIT     OUT/ youtube_*.mp4 ───────► Téléchargement opér
 
 ## Héritage CRUSADER — Éléments Portés (Coût Déjà Payé)
 
-Ces éléments sont copiés/adaptés depuis CRUSADER et ne seront PAS développés from scratch.
-Ils ont été validés en conditions de production réelles dans CRUSADER.
-
 | Élément | Frégates DORN | Origine CRUSADER | Commentaire |
 |---------|---------------|------------------|-------------|
-| `calculateMetadata` Remotion | F03 | F03 SIGISMUND | Durée dynamique depuis JSON → adapté pour timing DORN |
-| `--gl swangle` flag | F03 | F03 SIGISMUND | Rendu logiciel Colab — copie directe |
-| Modal chunking 3 workers | F03 | F03/crs_f03_modal_worker.py | Adapter les inputs (plan_de_vol.json vs timing+roadmap) |
-| Architecture src/ Remotion | F03 | F03 src/ (Root, Main, components) | Reécrire les composants (SVG math vs stickman) |
-| FFmpeg pipeline F04 | F04B | F04/crs_f04_helbrecht.py | Copie quasi-directe + ajout setpts conditionnel (V3) |
+| `calculateMetadata` Remotion | F03 | F03 SIGISMUND | Durée dynamique depuis JSON |
+| `--gl swangle` flag | F03 | F03 SIGISMUND | Rendu logiciel Colab |
+| Modal chunking 3 workers | F03 | F03/crs_f03_modal_worker.py | Adapté pour plan_de_vol.json |
+| Architecture src/ Remotion | F03 | F03 src/ (Root, Main, components) | Composants SVG math vs stickman |
+| FFmpeg pipeline F04 | F04B | F04/crs_f04_helbrecht.py | + setpts conditionnel (nouveau V3) |
 | `validated_by_magos: true` | F02 | F02 CASTELLAN | Pattern de validation identique |
-| `CRS_CUSTOS.py` | Toutes | CRS_CUSTOS.py | Adapté pour les frégates et schémas JSON DORN |
+| `CRS_CUSTOS.py` | Toutes | CRS_CUSTOS.py | Adapté pour frégates DORN |
 | IN/ → CODEBASE/ → OUT/ structure | Toutes | Toutes | Architecture identique |
-
-**Ce qui est NOUVEAU (from scratch) :**
-- F01 POLUX — validation JSON + strip EXIF (pas d'équivalent dans CRUSADER)
-- F02 CASTELLAN — Streamlit + Canvas JS (vs Flask + HTML natif CRUSADER)
-- F03 composants JSX — MathInterpreter, CurveTracer, AssetTracker, VirtualCamera (SVG neon vs stickman)
-- F04A INWIT — Viewer HTML + sélecteur vitesse (nouveau en V3)
-- META_POLUX / META_CAMERA — Metaprompts DORN
 
 ---
 
@@ -216,70 +253,53 @@ Ils ont été validés en conditions de production réelles dans CRUSADER.
 
 | Date | Décision | Justification |
 |------|----------|---------------|
-| 2026-05-29 | 60 fps fixe (vs 30 fps CRUSADER) | Visualisations mathématiques fluides, curves SVG |
-| 2026-05-29 | Streamlit pour F02 (vs Flask CRUSADER) | Canvas JS natif Streamlit, pas de HTML custom |
-| 2026-05-29 | Timing dynamique (math → durée) | Paradigme inversion TRIZ : la courbe dicte la composition |
-| 2026-05-29 | step_per_frame calculé par Gemini | Operateur donne durée cible, Gemini fait le calcul |
-| 2026-05-29 | F04 scindé F04A + F04B | Viewer de validation vitesse avant encoding final |
-| 2026-05-29 | playback_speed 1.0 → FFmpeg setpts conditionnel | Si speed=1.0, skip re-encode — qualité préservée |
-| 2026-05-29 | complexity_coefficient par engine_type | Gemini adapte le rythme selon la complexité visuelle |
-| 2026-05-29 | Modal chunking hérité de CRUSADER | 17h de débogage économisées — même pattern |
-| 2026-05-29 | CRS_CUSTOS.py adapté (pas réécrit) | Architecture de validation identique, seuls les chemins changent |
+| 2026-05-29 | 60 fps fixe (vs 30 fps CRUSADER) | Visualisations mathématiques fluides |
+| 2026-05-29 | Streamlit pour F02 (vs Flask CRUSADER) | Canvas JS natif Streamlit |
+| 2026-05-29 | Timing dynamique (math → durée) | La courbe dicte la composition |
+| 2026-05-29 | step_per_frame calculé par Gemini | Opérateur donne durée cible |
+| 2026-05-29 | F04 scindé F04A + F04B | Viewer de validation avant encoding final |
+| 2026-05-29 | playback_speed 1.0 → FFmpeg setpts conditionnel | Skip re-encode si speed=1.0 |
+| 2026-05-29 | complexity_coefficient par engine_type | Gemini adapte le rythme |
+| 2026-05-29 | Modal chunking hérité de CRUSADER | 17h de débogage économisées |
+| 2026-05-29 | CRS_CUSTOS.py adapté (pas réécrit) | Architecture identique, chemins changent |
 
 ---
 
-## Fil d'Ariane — Log Chronologique
+## Fil d'Ariane — Log Chronologique Complet
 
 | Date | Frégate | Phase | Action | Validé |
 |------|---------|-------|--------|--------|
+| 2026-06-05 | DORN | SCELLEMENT | PROJET DORN SCELLÉ DANS SON ENTIER | ✓ |
+| 2026-06-05 | F04B | PROD | FFmpeg Finishing + contrôle qualité — SCELLÉ | ✓ |
+| 2026-06-05 | F04A | PROD | Viewer vitesse + CRS_CUSTOS — SCELLÉ | ✓ |
 | 2026-06-05 | F02 | PROD | Test de production complet — SCELLÉ | ✓ |
 | 2026-06-05 | F03 | PROD | Test de production complet — SCELLÉ | ✓ |
 | 2026-06-05 | F03 | PROD | Bugfix #7 : images PNG/JPEG → public/IN/ | ✓ |
 | 2026-05-31 | F01 | PROD | Test de production complet — SCELLÉ | ✓ |
 | 2026-05-30 | F04 | AUDIT | Bug 1 : corriger appels CUSTOS F04A/F04B → F04 | ✓ |
-| 2026-05-30 | F03 | AUDIT | Bug 2 : MODAL_WORKER_TEMPLATE accolades doublées | ✓ |
-| 2026-05-30 | F03 | AUDIT | Bug 3 : complexity_coefficient dans CurveTracer + AssetTracker | ✓ |
-| 2026-05-30 | F03 | AUDIT | Bug 4 : compute_y_range replace('e') → regex \be\b | ✓ |
-| 2026-05-30 | F03 | AUDIT | Bug 5 : follow_curve_tip implémenté dans VirtualCamera | ✓ |
-| 2026-05-30 | F02 | AUDIT | Bug 6 : import os ajouté en CELL 7 DRN_F02.ipynb | ✓ |
-| 2026-05-29 | — | INIT | Création du repo DORN sur GitHub | ✓ |
-| 2026-05-29 | — | INIT | Structure des frégates initialisée | ✓ |
-| 2026-05-29 | — | INIT | Directive Impériale V3 scellée (PDF) | ✓ |
-| 2026-05-29 | — | INIT | CRS_CUSTOS.py adapté depuis CRUSADER | ✓ |
+| 2026-05-30 | F03 | AUDIT | Bugs 2-5 : MODAL, complexity_coeff, regex, camera | ✓ |
+| 2026-05-30 | F02 | AUDIT | Bug 6 : import os DRN_F02.ipynb | ✓ |
+| 2026-05-29 | — | INIT | Création repo + structure + Directive V3 | ✓ |
 
 ---
 
 ## F01 — POLUX ✓ SCELLÉ
-- Rôle : Validation plan_de_vol.json + strip EXIF PNG
-- Stack : Python stdlib + Pillow (EXIF)
-- IN: plan_de_vol.json + images/*.png | OUT: plan_de_vol.json (valide) + images/*.png (propres)
-- Statut : **SCELLÉ — 2026-05-31**
-- Test de production : **RÉUSSI**
+- Statut : **SCELLÉ — 2026-05-31** | Test prod : RÉUSSI
 
 ## F02 — CASTELLAN ✓ SCELLÉ
-- Rôle : HUD Streamlit + Canvas JS, simulation courbes, validation JSON
-- Stack : Streamlit + math.js CDN + Canvas JS
-- IN: plan_de_vol.json + images/*.png | OUT: plan_de_vol.json (figé, validated_by_magos)
-- Statut : **SCELLÉ — 2026-06-05**
-- Test de production : **RÉUSSI**
+- Statut : **SCELLÉ — 2026-06-05** | Test prod : RÉUSSI
 
 ## F03 — SIGISMUND ✓ SCELLÉ
-- Rôle : Rendu Remotion SVG neon 60fps (timing dynamique)
-- Stack : Remotion 4.x + React + Modal chunking (hérité CRUSADER)
-- IN: plan_de_vol.json (figé) + images/*.png|*.jpg|*.jpeg | OUT: video_render.mp4
-- Statut : **SCELLÉ — 2026-06-05**
-- Test de production : **RÉUSSI**
-- Note : calculateMetadata, --gl swangle, Modal chunking — portés depuis CRUSADER
-- Note : Assets PNG et JPEG supportés — servis depuis `CODEBASE/public/IN/`
+- Statut : **SCELLÉ — 2026-06-05** | Test prod : RÉUSSI
+- Assets PNG et JPEG supportés depuis `CODEBASE/public/IN/`
 
-## F04A/B — INWIT
-- Rôle : F04A = viewer HTML Colab + sélecteur vitesse ; F04B = FFmpeg finishing
-- Stack : HTML/JS natif + FFmpeg
-- IN: video_render.mp4 + plan_de_vol.json | OUT: youtube_short/long.mp4
-- Statut : EN FORGE — PROCHAINE CIBLE
-- Note : Pipeline FFmpeg hérité de F04 HELBRECHT CRUSADER + setpts conditionnel (nouveau)
+## F04A — INWIT ✓ SCELLÉ
+- Statut : **SCELLÉ — 2026-06-05** | Test prod : RÉUSSI
+
+## F04B — INWIT ✓ SCELLÉ
+- Statut : **SCELLÉ — 2026-06-05** | Test prod : RÉUSSI
+- Output : youtube_short.mp4 — 3.50 MB — H.264 — camouflage Lavf58.76.100
 
 ## METAPROMPTS
-- META_POLUX.md — 4 inputs opérateur + calcul step_per_frame par Gemini
-- META_CAMERA.md — Plan caméra depuis vidéo de référence
+- META_POLUX.md + META_CAMERA.md
 - Statut : EN FORGE
