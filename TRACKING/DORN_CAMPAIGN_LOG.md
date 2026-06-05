@@ -11,7 +11,7 @@
 |---------|-----|------|--------|--------------------|
 | F01 | POLUX | Oracle & Curation → plan_de_vol.json | SCELLÉ ✓ | 2026-05-31 |
 | F02 | CASTELLAN | HUD Contrôle + Sim. → plan_de_vol.json (figé) | EN FORGE | — |
-| F03 | SIGISMUND | Réacteur Multi-Formes → video_render.mp4 | EN FORGE | — |
+| F03 | SIGISMUND | Réacteur Multi-Formes → video_render.mp4 | SCELLÉ ✓ | 2026-06-05 |
 | F04A | INWIT | Viewer + Speed Control | EN FORGE | — |
 | F04B | INWIT | FFmpeg Finishing → youtube_*.mp4 | EN FORGE | — |
 | META | POLUX | Metaprompt Gemini (4 inputs) | EN FORGE | — |
@@ -19,10 +19,45 @@
 
 **Compteur de Guerre :**
 ```
-[█░░░] 1/4 frégates scellées
+[██░░] 2/4 frégates scellées
 [░░]   0/2 metaprompts scellés
-[█░░░] 1/4 tests de production réussis
+[██░░] 2/4 tests de production réussis
 ```
+
+---
+
+## CAMP_03 — TEST DE PRODUCTION F03 — 2026-06-05
+
+### F03 SIGISMUND — Test de Production
+
+| # | Cellule | Résultat | Note |
+|---|---------|----------|------|
+| 1 | Dépendances Remotion + React | ✓ OK | Build GitHub Actions réussi |
+| 2 | calculateMetadata — durée dynamique | ✓ OK | Durée calculée depuis plan_de_vol.json |
+| 3 | CurveTracer — rendu SVG neon | ✓ OK | Toutes les courbes tracées |
+| 4 | AssetTracker — images PNG/JPEG | ✓ OK | Assets servis depuis public/IN/ — PNG et JPEG supportés |
+| 5 | VirtualCamera — modes caméra | ✓ OK | follow_curve_tip, static, wide_reveal |
+| 6 | MathInterpreter — expressions math.js | ✓ OK | eval sécurisé, polar + cartesian |
+| 7 | rendu final video_render.mp4 | ✓ OK | 60 fps, dual format vertical/horizontal |
+
+**Bugfix identifié en production :**
+
+| # | Composant | Bug | Fix |
+|---|-----------|-----|-----|
+| 7 | `AssetTracker.jsx` | Images PNG/JPEG non affichées dans le rendu final — les assets doivent être présents dans `CODEBASE/public/IN/` pour que Remotion les serve correctement en prod | Assets copiés via `setup_public_assets()` vers `public/IN/` — PNG et JPEG supportés (`*.png *.jpg *.jpeg`) |
+
+**F03 SIGISMUND — SCELLÉ. PAR LA VOLONTÉ DE L'EMPEREUR ET DE SON CHAMPION SIGISMUND.**
+
+> *"The only true failure is to stop fighting."* — Sigismund, Premier Capitaine des Fists Impériaux
+
+### Fil d'Ariane — 2026-06-05
+
+| Date | Frégate | Phase | Action | Validé |
+|------|---------|-------|--------|--------|
+| 2026-06-05 | F03 | PROD | Test de production complet — 7 cellules | ✓ |
+| 2026-06-05 | F03 | PROD | Bugfix #7 : AssetTracker images PNG/JPEG → public/IN/ | ✓ |
+| 2026-06-05 | F03 | PROD | video_render.mp4 rendu 60fps — VALIDÉ | ✓ |
+| 2026-06-05 | F03 | SCELLEMENT | F03 SIGISMUND scellé | ✓ |
 
 ---
 
@@ -169,6 +204,8 @@ Ils ont été validés en conditions de production réelles dans CRUSADER.
 
 | Date | Frégate | Phase | Action | Validé |
 |------|---------|-------|--------|--------|
+| 2026-06-05 | F03 | PROD | Test de production complet — SCELLÉ | ✓ |
+| 2026-06-05 | F03 | PROD | Bugfix #7 : images PNG/JPEG → public/IN/ | ✓ |
 | 2026-05-31 | F01 | PROD | Test de production complet — SCELLÉ | ✓ |
 | 2026-05-30 | F04 | AUDIT | Bug 1 : corriger appels CUSTOS F04A/F04B → F04 | ✓ |
 | 2026-05-30 | F03 | AUDIT | Bug 2 : MODAL_WORKER_TEMPLATE accolades doublées | ✓ |
@@ -196,12 +233,14 @@ Ils ont été validés en conditions de production réelles dans CRUSADER.
 - IN: plan_de_vol.json + images/*.png | OUT: plan_de_vol.json (figé, validated_by_magos)
 - Statut : EN FORGE
 
-## F03 — SIGISMUND
+## F03 — SIGISMUND ✓ SCELLÉ
 - Rôle : Rendu Remotion SVG neon 60fps (timing dynamique)
 - Stack : Remotion 4.x + React + Modal chunking (hérité CRUSADER)
-- IN: plan_de_vol.json (figé) + images/*.png | OUT: video_render.mp4
-- Statut : EN FORGE
+- IN: plan_de_vol.json (figé) + images/*.png|*.jpg|*.jpeg | OUT: video_render.mp4
+- Statut : **SCELLÉ — 2026-06-05**
+- Test de production : **RÉUSSI**
 - Note : calculateMetadata, --gl swangle, Modal chunking — portés depuis CRUSADER
+- Note : Assets PNG et JPEG supportés — servis depuis `CODEBASE/public/IN/`
 
 ## F04A/B — INWIT
 - Rôle : F04A = viewer HTML Colab + sélecteur vitesse ; F04B = FFmpeg finishing
