@@ -141,7 +141,7 @@ step_per_frame = x_range / (target_duration_seconds × fps − final_freeze_fram
 | META_POLUX (Gemini chat) | F01 IN | plan_de_vol.json |
 | F01 OUT | F02 IN | plan_de_vol.json + images/*.png (EXIF propres) |
 | META_CAMERA (Gemini chat) | F02 IN | injection camera_plan dans plan_de_vol.json |
-| F02 OUT | F03 IN | plan_de_vol.json (figé, validated_by_magos) + images/*.png |
+| F02 OUT | F03 IN | plan_de_vol.json (figé, validated_by_magos) + images/*.png/*.jpg/*.jpeg |
 | F03 OUT | F04 IN | video_render.mp4 |
 | F02 OUT | F04 IN | plan_de_vol.json (pour format + titre + playback_speed) |
 
@@ -152,6 +152,7 @@ step_per_frame = x_range / (target_duration_seconds × fps − final_freeze_fram
 | # | Date | Campagne | Source | Destination | Fichiers | CUSTOS Out | CUSTOS In | Statut |
 |---|------|----------|--------|-------------|----------|------------|-----------|--------|
 | 1 | 2026-05-31 | CAMP_02 | F01 POLUX OUT | F02 CASTELLAN IN | plan_de_vol.json + images/*.png | — | ✓ CHECK-IN OK | TRANSIT AUTORISÉ |
+| 2 | 2026-06-05 | CAMP_03 | F02 CASTELLAN OUT | F03 SIGISMUND IN | plan_de_vol.json (validated_by_magos) + images/*.png/*.jpg/*.jpeg | ✓ CHECK-OUT OK | ✓ CHECK-IN OK | TRANSIT AUTORISÉ |
 
 ---
 
