@@ -1,13 +1,14 @@
 # META_POLUX — Metaprompt Gemini
 ## Oracle & Curation — PENTERACT DORN F01
-### STATUT : SCELLÉ — V3 — 2026-05-29
+### STATUT : SCELLÉ — V4 — 2026-06-06
 
 ---
 
 ## Rôle
 
 Ce metaprompt est la **porte d'entrée absolue** du pipeline PENTERACT DORN.
-Il transforme un concept pop-culture en `plan_de_vol.json` V3 complet et exploitable.
+Il transforme un concept pop-culture en `plan_de_vol.json` V3 complet et exploitable,
+ainsi que les métadonnées YouTube prêtes à copier-coller.
 
 **S'exécute en chat manuel Gemini — aucun appel API dans le code.**
 
@@ -18,7 +19,7 @@ Il transforme un concept pop-culture en `plan_de_vol.json` V3 complet et exploit
 1. Ouvre Gemini (chat.google.com ou Gemini Advanced)
 2. Copie-colle le bloc **PROMPT GEMINI** ci-dessous en entier
 3. Remplace les 4 balises `[INPUT_X]` par tes réponses réelles
-4. Envoie — Gemini génère le `plan_de_vol.json` complet
+4. Envoie — Gemini génère le `plan_de_vol.json` complet + les métadonnées YouTube
 
 ---
 
@@ -28,7 +29,7 @@ Il transforme un concept pop-culture en `plan_de_vol.json` V3 complet et exploit
 |---|--------|----------|---------|
 | 1 | `[INPUT_1]` | Sujet + thèse en 1 phrase | `Messi est meilleur que CR7 grâce à son centre de gravité bas` |
 | 2 | `[INPUT_2]` | Réponse mathématique souhaitée | `Montrer que stabilité = f(hauteur centre de gravité)` |
-| 3 | `[INPUT_3]` | Assets PNG disponibles (noms de fichiers) | `messi_head.png, cr7_head.png` |
+| 3 | `[INPUT_3]` | Assets PNG ou JPEG disponibles (noms de fichiers) | `messi_head.png, cr7_head.jpg` |
 | 4 | `[INPUT_4]` | Durée cible de la vidéo | `30 secondes` / `45 secondes` / `1 minute` |
 
 ---
@@ -40,7 +41,7 @@ Tu es l'Oracle POLUX du pipeline PENTERACT DORN — un système de visualisation
 Pop-Science Culture pour YouTube Shorts / TikTok.
 
 Ta mission : transformer le concept ci-dessous en un plan_de_vol.json V3 complet et prêt
-à entrer dans le pipeline de production.
+à entrer dans le pipeline de production, ainsi que les métadonnées YouTube associées.
 
 === INPUTS OPÉRATEUR ===
 
@@ -50,7 +51,7 @@ INPUT 1 — Sujet + thèse :
 INPUT 2 — Réponse mathématique souhaitée :
 [INPUT_2]
 
-INPUT 3 — Assets PNG disponibles :
+INPUT 3 — Assets PNG ou JPEG disponibles :
 [INPUT_3]
 
 INPUT 4 — Durée cible :
@@ -92,12 +93,18 @@ Paramètres à calculer :
 - pace_factor : 1.0 par défaut, ajustable si une courbe doit révéler plus vite
 
 ÉTAPE 4 — Génération du hook viral et des métadonnées
-- title : accroche courte, choc émotionnel, 6-10 mots max
+- title : accroche courte, choc émotionnel
+  → Maximum 45 caractères (emoji inclus)
+  → Si format = "vertical" : titre ultra-court, tension maximale, emoji final
+    Structure : Hook + Sujet + Bait + emoji  (ex: "La Physique Prouve Messi Imbattable 🧲")
+  → Si format = "horizontal" : titre plus descriptif avec sujet + révélation + emoji
+    Structure : Hook + Sujet + Bait + emoji  (ex: "La Physique Explique Pourquoi Messi Domine CR7 🔬")
 - hook : 1 phrase d'accroche narrative (tension + révélation mathématique)
 - thesis : la thèse mathématique en 1 phrase technique
 
-ÉTAPE 5 — Attribution des assets PNG
-Pour chaque PNG listé en INPUT 3, associe-le à la courbe la plus pertinente.
+ÉTAPE 5 — Attribution des assets PNG ou JPEG
+Pour chaque fichier PNG, JPG ou JPEG listé en INPUT 3, associe-le à la courbe la plus pertinente.
+`asset_filename` accepte les extensions `.png`, `.jpg`, `.jpeg`.
 scale_factor = 1.2, auto_rotate_slope = true, inertia_smooth = 0.1
 
 ÉTAPE 6 — Génération de la final_frame
@@ -108,6 +115,39 @@ scale_factor = 1.2, auto_rotate_slope = true, inertia_smooth = 0.1
 - wave_type = "sine"
 - base_frequency_hz = 220
 - frequency_multiplier = 12.0
+
+ÉTAPE 8 — Génération des métadonnées YouTube
+Génère le bloc `youtube_metadata` avec les règles suivantes.
+
+Champ `title` :
+- Reprend le title généré à l'Étape 4 (déjà ≤ 45 chars, avec emoji)
+
+Champ `hashtags` — exactement 3 entrées :
+- 1 broad short-tail : mot-clé large de la niche (ex: #football, #math, #physique)
+- 2 long-tail niche : expressions précises extraites de INPUT_1
+  (ex: #centreDeGravite, #biomecaniqueFootball)
+- Format : #CamelCase, sans espace, sans caractères spéciaux
+
+Champ `description` — 4 blocs séparés par une ligne vide :
+
+BLOC 1 — SEO Hook (en français)
+Rédige 2-3 phrases captivantes à partir de `title`, `hook` et `thesis`.
+Intègre naturellement des mots-clés liés au sujet de INPUT_1.
+Objectif : accrocher le lecteur et améliorer le référencement.
+
+BLOC 2 — Déclaration d'Œuvre Originale (en anglais — texte fixe)
+Every video on this channel is unique and produced from mathematical calculations performed entirely by hand.
+All animations are created from scratch using our own custom-built tools — no templates, no stock footage.
+This content is the exclusive intellectual property of this channel.
+Any reproduction, re-upload, or redistribution without the explicit written consent of the creator is strictly prohibited.
+These videos reflect the work of an independent creator who personally conceives, calculates, and animates every frame.
+
+BLOC 3 — Hashtags
+Les 3 hashtags du champ `hashtags`, séparés par un espace.
+
+BLOC 4 — Tags SEO cachés (français + anglais)
+Liste de 8 à 12 mots-clés sans `#`, séparés par des espaces.
+Extraits du sujet (INPUT_1), de la niche mathématique, des courbes, et du format vidéo.
 
 === FORMAT DE SORTIE OBLIGATOIRE ===
 
@@ -190,6 +230,11 @@ Remplis TOUS les champs. Ne laisse aucun champ vide.
     "wave_type": "sine",
     "base_frequency_hz": 220,
     "frequency_multiplier": 12.0
+  },
+  "youtube_metadata": {
+    "title": "",
+    "hashtags": ["", "", ""],
+    "description": ""
   }
 }
 ```
@@ -202,7 +247,7 @@ Remplis TOUS les champs. Ne laisse aucun champ vide.
 {
   "matrix_signature": "PENTERACT_DORN_VII_LEGION",
   "concept_metadata": {
-    "title": "La Physique Prouve Que Messi Est Imbattable",
+    "title": "La Physique Prouve Messi Imbattable 🧲",
     "hook": "La science a tranché le débat le plus chaud du foot mondial.",
     "thesis": "La stabilité biomécanique est une fonction inverse de la hauteur du centre de gravité.",
     "engine_type": "time_evolution_comparison",
@@ -259,7 +304,7 @@ Remplis TOUS les champs. Ne laisse aucun champ vide.
         "pace_factor": 1.0
       },
       "tracking_target": {
-        "asset_filename": "cr7_head.png",
+        "asset_filename": "cr7_head.jpg",
         "scale_factor": 1.2,
         "physics": {
           "auto_rotate_slope": true,
@@ -306,6 +351,11 @@ Remplis TOUS les champs. Ne laisse aucun champ vide.
     "wave_type": "sine",
     "base_frequency_hz": 220,
     "frequency_multiplier": 12.0
+  },
+  "youtube_metadata": {
+    "title": "La Physique Prouve Messi Imbattable 🧲",
+    "hashtags": ["#football", "#centreDeGravite", "#biomecaniqueFootball"],
+    "description": "La physique a enfin tranché le débat Messi vs CR7. Découvrez comment la biomécanique révèle que la stabilité est une fonction mathématique directe de la hauteur du centre de gravité — et pourquoi Messi gagne à tout coup.\n\nEvery video on this channel is unique and produced from mathematical calculations performed entirely by hand.\nAll animations are created from scratch using our own custom-built tools — no templates, no stock footage.\nThis content is the exclusive intellectual property of this channel.\nAny reproduction, re-upload, or redistribution without the explicit written consent of the creator is strictly prohibited.\nThese videos reflect the work of an independent creator who personally conceives, calculates, and animates every frame.\n\n#football #centreDeGravite #biomecaniqueFootball\n\nmessi cristiano stabilité biomécanique physique football mathématiques courbe sigmoid viral centre gravité"
   }
 }
 ```
@@ -321,8 +371,9 @@ Avant de déposer le JSON dans `F01_POLUX/IN/`, vérifie manuellement :
 - [ ] `complexity_coefficient` correspond au `engine_type`
 - [ ] Au moins 1 courbe dans `reactor_curves`
 - [ ] `math_input` en format math.js (pas Python, pas LaTeX)
-- [ ] Tous les PNG listés en INPUT 3 sont associés à une courbe
+- [ ] Tous les PNG/JPEG listés en INPUT 3 sont associés à une courbe
+- [ ] `youtube_metadata` présent — titre ≤ 45 chars, 3 hashtags, description 4 blocs
 
 ---
 
-*SCELLÉ — PENTERACT DORN V3 — VIIe Légion — 2026-05-29*
+*SCELLÉ — PENTERACT DORN V4 — VIIe Légion — 2026-06-06*
