@@ -11,14 +11,12 @@ Stack : Streamlit + Canvas JS + math.js (CDN).
 Usage (Colab — depuis DRN_F02.ipynb) :
     streamlit run drn_f02_castellan.py -- --drive-base /content/drive/MyDrive/DRIVE_DORN
 
-Entrées  : F02_CASTELLAN/IN/plan_de_vol.json   (sans camera_plan, sorti de F01)
-           F02_CASTELLAN/IN/camera_plan.json    (sorti de META_CAMERA — fichier séparé)
+Entrées  : F02_CASTELLAN/IN/plan_de_vol.json   (plan sorti de F01 + camera_plan généré par META_POLUX V5)
            F02_CASTELLAN/IN/images/*.png
-Sorties  : F02_CASTELLAN/OUT/plan_de_vol.json  (fusionné, validated_by_magos: true)
+Sorties  : F02_CASTELLAN/OUT/plan_de_vol.json  (validated_by_magos: true)
 """
 
 import argparse
-import copy
 import datetime
 import json
 import os
@@ -31,12 +29,13 @@ import streamlit.components.v1 as components
 
 DEFAULT_DRIVE_BASE = "/content/drive/MyDrive/DRIVE_DORN"
 
-REVEAL_STYLES    = ["linear", "ease_in", "ease_out", "ease_in_out", "dramatic"]
-MOVEMENT_ENERGY  = ["calm", "cinematic", "aggressive", "viral_edit"]
-GEOMETRY_MODES   = ["cartesian", "polar"]
-FORMATS          = ["vertical", "horizontal"]
+REVEAL_STYLES   = ["linear", "ease_in", "ease_out", "ease_in_out", "dramatic"]
+MOVEMENT_ENERGY = ["calm", "cinematic", "aggressive", "viral_edit"]
+GEOMETRY_MODES  = ["cartesian", "polar"]
+FORMATS         = ["vertical", "horizontal"]
+FONTS           = ["monospace", "serif", "sans-serif"]
 
-# ─── Args (Streamlit passe les args après '--') ────────────────────────────────
+# ─── Args ──────────────────────────────────────────────────────────────────────
 
 def get_drive_base():
     try:
@@ -99,6 +98,7 @@ canvas{{display:block;margin:0 auto;background:#0a0a0f}}
 <script>
 const C=JSON.parse('{json_str}');
 const cam=C.camera_plan||null;
+const hud=C.hud_config||{{}};
 const cnv=document.getElementById('sim'),ctx=cnv.getContext('2d');
 const sld=document.getElementById('slider'),inf=document.getElementById('info');
 document.getElementById('ttl').textContent=C.concept_metadata?.title||'';
@@ -164,7 +164,7 @@ function samplePolar(expr,tCur,n=350){{
 
 function yRange(curves,xCur){{
   let mn=Infinity,mx=-Infinity;
-  curves.forEach(c=>{{sampleCart(c.math_input,xCur).forEach(([_,y])=>{{mn=Math.min(mn,y);mx=Math.max(mx,y);}});}});
+  curves.forEach(c=>{{sampleCart(c.math_input,xCur).forEach(([,y])=>{{mn=Math.min(mn,y);mx=Math.max(mx,y);}});}});
   if(!isFinite(mn)){{mn=-1;mx=1;}}
   const p=(mx-mn)*0.12||0.5;return[mn-p,mx+p];
 }}
@@ -180,15 +180,35 @@ function toPolar(r,th,rMax){{
 
 // ─── Draw helpers ────────────────────────────────────────────────────────────
 
+function hexToRgba(hex,alpha){{
+  const h=hex.replace('#','');
+  const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);
+  return `rgba(${{r}},${{g}},${{b}},${{alpha}})`;
+}}
+
 function drawGrid(mn,mx){{
-  ctx.strokeStyle='#151525';ctx.lineWidth=1;
+  const gc=hud.grid_color||'#151525';
+  const go=hud.grid_opacity??1.0;
+  const glw=hud.grid_line_width||1;
+  const alc=hud.axis_label_color||'#888888';
+  const als=hud.axis_label_size_px||10;
+  const alf=hud.axis_label_font||'monospace';
+  ctx.strokeStyle=hexToRgba(gc,go);ctx.lineWidth=glw;
   for(let i=0;i<=5;i++){{const x=PL+(i/5)*PW;ctx.beginPath();ctx.moveTo(x,PT);ctx.lineTo(x,PT+PHT);ctx.stroke();}}
   for(let i=0;i<=4;i++){{const y=PT+(i/4)*PHT;ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(PL+PW,y);ctx.stroke();}}
-  ctx.fillStyle='#444';ctx.font='9px monospace';ctx.textAlign='center';
+  if(hud.show_center_axis){{
+    const cac=hud.center_axis_color||'#333355';
+    ctx.strokeStyle=cac;ctx.lineWidth=1.5;
+    const cx=PL+((0-xS)/(xE-xS))*PW;
+    if(cx>=PL&&cx<=PL+PW){{ctx.beginPath();ctx.moveTo(cx,PT);ctx.lineTo(cx,PT+PHT);ctx.stroke();}}
+    const cy=PT+(1-(0-mn)/(mx-mn))*PHT;
+    if(cy>=PT&&cy<=PT+PHT){{ctx.beginPath();ctx.moveTo(PL,cy);ctx.lineTo(PL+PW,cy);ctx.stroke();}}
+  }}
+  ctx.fillStyle=alc;ctx.font=`${{als}}px ${{alf}}`;ctx.textAlign='center';
   for(let i=0;i<=5;i++)ctx.fillText((xS+(i/5)*(xE-xS)).toFixed(1),PL+(i/5)*PW,PT+PHT+14);
   ctx.textAlign='right';
   for(let i=0;i<=4;i++)ctx.fillText((mx-(i/4)*(mx-mn)).toFixed(1),PL-4,PT+(i/4)*PHT+4);
-  ctx.fillStyle='#666';ctx.font='10px monospace';ctx.textAlign='center';
+  ctx.fillStyle=alc;ctx.font=`${{als}}px ${{alf}}`;ctx.textAlign='center';
   ctx.fillText(C.space_environment?.x_label||'x',W/2,H-2);
   ctx.save();ctx.translate(11,H/2);ctx.rotate(-Math.PI/2);
   ctx.fillText(C.space_environment?.y_label||'y',0,0);ctx.restore();
@@ -197,8 +217,8 @@ function drawGrid(mn,mx){{
 function drawCartCurve(c,xCur,mn,mx){{
   const pts=sampleCart(c.math_input,xCur);if(pts.length<2)return null;
   const col=c.render_style?.color_hex||'#00FFD1';
-  const glo=c.render_style?.glow_radius_px||20;
-  const lw=c.render_style?.line_width_px||6;
+  const glo=c.render_style?.glow_radius_px??20;
+  const lw=c.render_style?.line_width_px??6;
   ctx.save();ctx.shadowBlur=glo;ctx.shadowColor=col;
   ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.lineJoin='round';ctx.lineCap='round';
   ctx.beginPath();
@@ -207,6 +227,16 @@ function drawCartCurve(c,xCur,mn,mx){{
   const[lx,ly]=toXY(pts[pts.length-1][0],pts[pts.length-1][1],mn,mx);
   ctx.save();ctx.shadowBlur=glo*1.5;ctx.shadowColor=col;ctx.fillStyle='#fff';
   ctx.beginPath();ctx.arc(lx,ly,5,0,Math.PI*2);ctx.fill();ctx.restore();
+  if(c.render_style?.show_equation_label!==false){{
+    const elc=c.render_style?.equation_label_color||'#FFFFFF';
+    const els=c.render_style?.equation_label_size_px||11;
+    const elf=c.render_style?.equation_label_font||'monospace';
+    ctx.save();
+    ctx.fillStyle=elc;ctx.font=`${{els}}px ${{elf}}`;ctx.textAlign='left';
+    ctx.shadowBlur=4;ctx.shadowColor='#000000';
+    ctx.fillText(c.math_input||'',lx+8,ly-8);
+    ctx.restore();
+  }}
   return[lx,ly];
 }}
 
@@ -214,8 +244,8 @@ function drawPolarCurve(c,tCur){{
   const pts=samplePolar(c.math_input,tCur);if(pts.length<2)return;
   const rMax=Math.max(...pts.map(([r])=>Math.abs(r)))||1;
   const col=c.render_style?.color_hex||'#00FFD1';
-  const glo=c.render_style?.glow_radius_px||20;
-  const lw=c.render_style?.line_width_px||6;
+  const glo=c.render_style?.glow_radius_px??20;
+  const lw=c.render_style?.line_width_px??6;
   ctx.save();ctx.shadowBlur=glo;ctx.shadowColor=col;
   ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.lineJoin='round';
   ctx.beginPath();
@@ -224,10 +254,14 @@ function drawPolarCurve(c,tCur){{
 }}
 
 function drawFreezeOverlay(){{
-  const ann=C.final_frame?.annotation||'';
+  const ff=C.final_frame||{{}};
+  const ann=ff.annotation||'';
+  const annc=ff.annotation_color||'#FFD700';
+  const anns=ff.annotation_size_px||14;
+  const annf=ff.annotation_font||'monospace';
   ctx.save();
   ctx.fillStyle='rgba(0,0,0,0.55)';ctx.fillRect(PL,PT+PHT*0.6,PW,PHT*0.32);
-  ctx.fillStyle='#FFD700';ctx.font='bold 12px monospace';ctx.textAlign='center';
+  ctx.fillStyle=annc;ctx.font=`bold ${{anns}}px ${{annf}}`;ctx.textAlign='center';
   ctx.fillText(ann,W/2,PT+PHT*0.78);
   ctx.fillStyle='#00FFD1';ctx.font='10px monospace';
   ctx.fillText('[ FREEZE — FINAL FRAME ]',W/2,PT+PHT*0.88);
@@ -245,7 +279,6 @@ function applyCamTransform(frame,mn,mx){{
   const shakeY=Math.cos(frame*5.73+0.7)*shk*8;
   let panX=(seg.x_offset||0)+shakeX;
   let panY=(seg.y_offset||0)+shakeY;
-  // follow_asset: pan to keep target curve endpoint at canvas center
   if(seg.mode==='follow_asset'&&seg.target_curve_id&&mn!==undefined){{
     const tc=(C.reactor_curves||[]).find(c=>c.id===seg.target_curve_id);
     if(tc){{
@@ -260,7 +293,6 @@ function applyCamTransform(frame,mn,mx){{
       }}
     }}
   }}
-  // Scale around canvas center then pan
   ctx.save();
   ctx.translate(W/2+panX,H/2+panY);
   ctx.scale(zoom,zoom);
@@ -278,16 +310,26 @@ function draw(progress){{
   const frozen=frame>=(totF-frz);
   const curves=C.reactor_curves||[];
   ctx.clearRect(0,0,W,H);ctx.fillStyle='#0a0a0f';ctx.fillRect(0,0,W,H);
-  // Compute y range once (needed for camera follow_asset + drawing)
   const[mn,mx]=geo!=='polar'?yRange(curves,xCur):[0,1];
-  // Apply camera transform
+  const axesWorld=hud.axes_world_space||false;
   let camApplied=false;
-  if(cameraMode&&cam){{camApplied=applyCamTransform(frame,mn,mx);}}
-  // Draw scene
-  if(geo==='polar'){{curves.forEach(c=>drawPolarCurve(c,xCur));}}
-  else{{drawGrid(mn,mx);curves.forEach(c=>drawCartCurve(c,xCur,mn,mx));}}
-  // Restore camera before overlay (overlay always in screen space)
-  if(camApplied)ctx.restore();
+  if(cameraMode&&cam){{
+    if(axesWorld){{
+      camApplied=applyCamTransform(frame,mn,mx);
+      if(geo==='polar'){{curves.forEach(c=>drawPolarCurve(c,xCur));}}
+      else{{drawGrid(mn,mx);curves.forEach(c=>drawCartCurve(c,xCur,mn,mx));}}
+      if(camApplied)ctx.restore();
+    }}else{{
+      if(geo!=='polar')drawGrid(mn,mx);
+      camApplied=applyCamTransform(frame,mn,mx);
+      if(geo==='polar'){{curves.forEach(c=>drawPolarCurve(c,xCur));}}
+      else{{curves.forEach(c=>drawCartCurve(c,xCur,mn,mx));}}
+      if(camApplied)ctx.restore();
+    }}
+  }}else{{
+    if(geo==='polar'){{curves.forEach(c=>drawPolarCurve(c,xCur));}}
+    else{{drawGrid(mn,mx);curves.forEach(c=>drawCartCurve(c,xCur,mn,mx));}}
+  }}
   if(frozen)drawFreezeOverlay();
   inf.textContent=`x=${{xCur.toFixed(3)}} | t=${{tSec}}s | frame ${{frame}}/${{totF}}${{frozen?' [FREEZE]':''}}${{cameraMode?' [CAM]':''}}`;
 }}
@@ -300,11 +342,7 @@ function generateSnapshots(){{
   const prevCam=cameraMode;
   cameraMode=true;
   const keyFrames=[0,Math.round(totF/2),totF-1];
-  const lbls=[
-    'DEBUT — f.0',
-    `MILIEU — f.${{Math.round(totF/2)}}`,
-    `FIN — f.${{totF-1}}`
-  ];
+  const lbls=['DEBUT — f.0',`MILIEU — f.${{Math.round(totF/2)}}`,`FIN — f.${{totF-1}}`];
   keyFrames.forEach((frame,i)=>{{
     draw(frame/totF);
     const sc=document.getElementById('s'+i);
@@ -333,46 +371,46 @@ def render_curve_editor(data, idx):
         c["math_input"] = st.text_input(
             f"math_input (math.js) #{idx}", value=c.get("math_input", ""),
             key=f"mi_{idx}", help="Ex: 1/(1+exp(-(x-5))) — variables: x ou theta")
+
         rs = c.setdefault("render_style", {})
         rs["color_hex"] = st.color_picker(f"Couleur #{idx}", value=rs.get("color_hex", "#00FFD1"), key=f"col_{idx}")
+        rs["glow_radius_px"] = st.slider(f"Glow (halo) #{idx}", 0, 60, int(rs.get("glow_radius_px", 20)), 1, key=f"glo_{idx}")
+        rs["line_width_px"] = st.slider(f"Épaisseur ligne #{idx}", 1, 15, int(rs.get("line_width_px", 6)), 1, key=f"lw_{idx}")
+
+        with st.expander(f"Équation label #{idx}", expanded=False):
+            rs["show_equation_label"] = st.toggle(
+                f"Afficher équation #{idx}", value=rs.get("show_equation_label", True), key=f"sel_{idx}")
+            if rs["show_equation_label"]:
+                rs["equation_label_color"] = st.color_picker(
+                    f"Couleur équation #{idx}", value=rs.get("equation_label_color", "#FFFFFF"), key=f"elc_{idx}")
+                rs["equation_label_size_px"] = st.slider(
+                    f"Taille équation #{idx}", 8, 18, int(rs.get("equation_label_size_px", 11)), 1, key=f"els_{idx}")
+                cur_elf = rs.get("equation_label_font", "monospace")
+                rs["equation_label_font"] = st.selectbox(
+                    f"Police équation #{idx}", FONTS,
+                    index=FONTS.index(cur_elf) if cur_elf in FONTS else 0, key=f"elf_{idx}")
+
+        tt = c.setdefault("tracking_target", {})
+        with st.expander(f"Image asset #{idx}", expanded=False):
+            tt["show_asset"] = st.toggle(
+                f"Afficher image #{idx}", value=tt.get("show_asset", True), key=f"sa_{idx}")
+            tt["asset_filename"] = st.text_input(
+                f"Nom fichier #{idx}", value=tt.get("asset_filename", ""),
+                key=f"png_{idx}", help="Nom du fichier PNG/JPEG dans IN/images/")
+            tt["scale_factor"] = st.slider(
+                f"Taille PNG (scale F03) #{idx}", 0.3, 3.0, float(tt.get("scale_factor", 1.2)), 0.1, key=f"sf_{idx}")
+
         asp = c.setdefault("animation_speed", {})
         cur_rs = asp.get("reveal_style", "linear")
         idx_rs = REVEAL_STYLES.index(cur_rs) if cur_rs in REVEAL_STYLES else 0
         asp["reveal_style"] = st.selectbox(f"reveal_style #{idx}", REVEAL_STYLES, index=idx_rs, key=f"rv_{idx}")
         asp["pace_factor"] = st.slider(f"pace_factor #{idx}", 0.1, 3.0,
                                        float(asp.get("pace_factor", 1.0)), 0.1, key=f"pf_{idx}")
-        tt = c.setdefault("tracking_target", {})
-        tt["asset_filename"] = st.text_input(f"PNG asset #{idx}", value=tt.get("asset_filename", ""),
-                                             key=f"png_{idx}", help="Nom du fichier PNG dans IN/images/")
-
-
-def render_camera_info(data):
-    """Affiche le camera_plan en lecture seule."""
-    cam = data.get("camera_plan")
-    if not cam:
-        st.warning("camera_plan absent — déposer camera_plan.json dans F02/IN/ puis relancer.")
-        return
-    gs = cam.get("global_style", {})
-    st.caption(
-        f"Signature : `{cam.get('camera_signature', '?')}` | "
-        f"Energy : `{gs.get('movement_energy', '?')}` | "
-        f"Easing : `{gs.get('default_easing', '?')}`"
-    )
-    segs = cam.get("camera_segments", [])
-    for s in segs:
-        mode_color = {"follow_asset": "🟡", "wide_reveal": "🔵", "final_proof_lock": "🟢"}.get(s["mode"], "⚪")
-        st.caption(
-            f"{mode_color} Seg frames **{s['start_frame']}–{s['end_frame']}** | "
-            f"`{s['mode']}` | zoom `{s['zoom']}` | "
-            f"offset ({s.get('x_offset',0)}, {s.get('y_offset',0)}) | "
-            f"shake `{s.get('shake',0)}`"
-        )
 
 
 def main():
     base     = get_drive_base()
     in_json  = os.path.join(base, "F02_CASTELLAN", "IN", "plan_de_vol.json")
-    in_cam   = os.path.join(base, "F02_CASTELLAN", "IN", "camera_plan.json")
     out_json = os.path.join(base, "F02_CASTELLAN", "OUT", "plan_de_vol.json")
 
     st.set_page_config(page_title="F02 CASTELLAN — PENTERACT DORN", layout="wide")
@@ -386,30 +424,9 @@ def main():
             st.error(f"plan_de_vol.json introuvable : {in_json}")
             st.info("Déposer le fichier dans F02_CASTELLAN/IN/ puis relancer.")
             st.stop()
-        plan = load_json(in_json)
-
-        # Merge camera_plan si absent du plan et présent en fichier séparé
-        if "camera_plan" not in plan:
-            if os.path.exists(in_cam):
-                cam_raw = load_json(in_cam)
-                # camera_plan.json peut avoir un wrapper {"camera_plan": {...}} ou être direct
-                plan["camera_plan"] = cam_raw.get("camera_plan", cam_raw)
-                st.session_state.cam_source = "fichier séparé (camera_plan.json)"
-            else:
-                st.session_state.cam_source = None
-        else:
-            st.session_state.cam_source = "intégré dans plan_de_vol.json"
-
-        st.session_state.data = plan
+        st.session_state.data = load_json(in_json)
 
     data = st.session_state.data
-
-    # Status caméra
-    cam_source = st.session_state.get("cam_source")
-    if cam_source:
-        st.success(f"camera_plan chargé — source : {cam_source}")
-    elif "camera_plan" not in data:
-        st.warning("camera_plan absent. Déposer camera_plan.json dans F02/IN/ pour activer la visualisation caméra.")
 
     col_edit, col_sim = st.columns([1, 1], gap="large")
 
@@ -432,6 +449,26 @@ def main():
                                        index=GEOMETRY_MODES.index(cur_gm) if cur_gm in GEOMETRY_MODES else 0,
                                        horizontal=True, key="gm")
 
+        st.markdown("### Grille & Axes")
+        hud = data.setdefault("hud_config", {})
+        hud["grid_color"] = st.color_picker("Couleur grille", value=hud.get("grid_color", "#151525"), key="gc")
+        hud["grid_opacity"] = st.slider("Opacité grille", 0.0, 1.0, float(hud.get("grid_opacity", 1.0)), 0.05, key="go")
+        hud["grid_line_width"] = st.slider("Épaisseur lignes grille", 0.5, 3.0, float(hud.get("grid_line_width", 1.0)), 0.5, key="glw")
+        hud["axis_label_color"] = st.color_picker("Couleur labels axes", value=hud.get("axis_label_color", "#888888"), key="alc")
+        hud["axis_label_size_px"] = st.slider("Taille labels axes", 8, 16, int(hud.get("axis_label_size_px", 10)), 1, key="als")
+        cur_alf = hud.get("axis_label_font", "monospace")
+        hud["axis_label_font"] = st.selectbox("Police labels axes", FONTS,
+                                              index=FONTS.index(cur_alf) if cur_alf in FONTS else 0, key="alf")
+        hud["show_center_axis"] = st.toggle("Axe central visible", value=hud.get("show_center_axis", False), key="sca")
+        if hud["show_center_axis"]:
+            hud["center_axis_color"] = st.color_picker("Couleur axe central",
+                                                        value=hud.get("center_axis_color", "#333355"), key="cac")
+        else:
+            hud.setdefault("center_axis_color", "#333355")
+        hud["axes_world_space"] = st.toggle(
+            "Axes en world space", value=hud.get("axes_world_space", False), key="aws",
+            help="OFF = grille fixe screen space (recommandé). ON = grille zoome avec la caméra.")
+
         st.markdown("### Courbes")
         n_curves = len(data.get("reactor_curves", []))
         for i in range(n_curves):
@@ -440,19 +477,68 @@ def main():
             data.setdefault("reactor_curves", []).append({
                 "id": f"courbe_{n_curves + 1}",
                 "math_input": "sin(x)",
-                "render_style": {"color_hex": "#FF3366", "glow_radius_px": 20, "line_width_px": 6},
+                "render_style": {
+                    "color_hex": "#FF3366",
+                    "glow_radius_px": 20,
+                    "line_width_px": 6,
+                    "show_equation_label": True,
+                    "equation_label_color": "#FFFFFF",
+                    "equation_label_size_px": 11,
+                    "equation_label_font": "monospace"
+                },
                 "animation_speed": {"reveal_style": "linear", "pace_factor": 1.0},
-                "tracking_target": {"asset_filename": "", "scale_factor": 1.2,
-                                    "physics": {"auto_rotate_slope": True, "inertia_smooth": 0.1}}
+                "tracking_target": {
+                    "show_asset": True,
+                    "asset_filename": "",
+                    "scale_factor": 1.2,
+                    "physics": {"auto_rotate_slope": True, "inertia_smooth": 0.1}
+                }
             })
             st.rerun()
 
         st.markdown("### Final Frame")
         ff = data.setdefault("final_frame", {})
-        ff["annotation"] = st.text_input("Annotation finale", value=ff.get("annotation", ""), key="ann")
+        ff["annotation"] = st.text_input("Texte annotation", value=ff.get("annotation", ""), key="ann")
+        ff["annotation_color"] = st.color_picker("Couleur annotation",
+                                                  value=ff.get("annotation_color", "#FFD700"), key="annc")
+        ff["annotation_size_px"] = st.slider("Taille annotation", 10, 28,
+                                             int(ff.get("annotation_size_px", 14)), 1, key="anns")
+        cur_annf = ff.get("annotation_font", "monospace")
+        ff["annotation_font"] = st.selectbox("Police annotation", FONTS,
+                                             index=FONTS.index(cur_annf) if cur_annf in FONTS else 0, key="annf")
+        ff["freeze_duration_frames"] = st.slider("Durée freeze (frames)", 60, 360,
+                                                  int(ff.get("freeze_duration_frames", 90)), 10, key="fdf")
 
-        st.markdown("### Camera Plan — lecture seule (META_CAMERA)")
-        render_camera_info(data)
+        st.markdown("### Camera Plan")
+        cam_data = data.get("camera_plan")
+        cam_on = st.toggle("Camera ON/OFF", value=bool(cam_data), key="cam_on")
+        if cam_on:
+            if not cam_data:
+                data["camera_plan"] = {
+                    "global_style": {
+                        "movement_energy": "cinematic",
+                        "shake_intensity": 0.05,
+                        "default_easing": "ease_in_out"
+                    },
+                    "camera_segments": []
+                }
+                cam_data = data["camera_plan"]
+            gs = cam_data.setdefault("global_style", {})
+            cur_me = gs.get("movement_energy", "cinematic")
+            gs["movement_energy"] = st.selectbox(
+                "movement_energy", MOVEMENT_ENERGY,
+                index=MOVEMENT_ENERGY.index(cur_me) if cur_me in MOVEMENT_ENERGY else 1, key="me")
+            gs["shake_intensity"] = st.slider(
+                "shake_intensity global", 0.0, 0.15, float(gs.get("shake_intensity", 0.05)), 0.01, key="si")
+            segs_json = json.dumps(cam_data.get("camera_segments", []), indent=2, ensure_ascii=False)
+            new_segs_json = st.text_area("Segments caméra (JSON brut)", value=segs_json,
+                                         height=200, key="segs_json")
+            try:
+                cam_data["camera_segments"] = json.loads(new_segs_json)
+            except json.JSONDecodeError as e:
+                st.error(f"JSON invalide dans les segments : {e}")
+        else:
+            data.pop("camera_plan", None)
 
         st.divider()
         st.markdown("### Timing (lecture seule — modifiable dans plan_de_vol.json)")
@@ -463,21 +549,17 @@ def main():
         cols_t[2].metric("step_per_frame", t.get("step_per_frame", "?"))
 
         st.divider()
-        # ── FIGER LE PLAN DE VOL ─────────────────────────────────────────────
-        st.markdown("### ⚡ Validation finale")
-        if "camera_plan" not in data:
-            st.error("Impossible de figer : camera_plan manquant. Déposer camera_plan.json dans F02/IN/.")
-        else:
-            if st.button("FIGER LE PLAN DE VOL", type="primary", use_container_width=True):
-                data["validated_by_magos"] = True
-                data["validation_timestamp"] = datetime.datetime.utcnow().isoformat() + "Z"
-                # Aligne freeze_duration_frames sur final_freeze_frames
-                data.setdefault("final_frame", {})["freeze_duration_frames"] = \
-                    data.get("timing", {}).get("final_freeze_frames", 180)
-                save_json(data, out_json)
-                st.success(f"Plan de vol figé → {out_json}")
-                st.success("validated_by_magos: true | camera_plan inclus | Passer à F03 SIGISMUND.")
-                st.balloons()
+        st.markdown("### Validation finale")
+        if st.button("FIGER LE PLAN DE VOL", type="primary", use_container_width=True):
+            data["validated_by_magos"] = True
+            data["validation_timestamp"] = datetime.datetime.utcnow().isoformat() + "Z"
+            data.setdefault("final_frame", {})["freeze_duration_frames"] = \
+                ff.get("freeze_duration_frames",
+                       data.get("timing", {}).get("final_freeze_frames", 180))
+            save_json(data, out_json)
+            st.success(f"Plan de vol figé → {out_json}")
+            st.success("validated_by_magos: true | Passer à F03 SIGISMUND.")
+            st.balloons()
 
     # ── Colonne simulation ───────────────────────────────────────────────────
     with col_sim:
