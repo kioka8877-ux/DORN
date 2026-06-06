@@ -1,6 +1,6 @@
-# META_POLUX — Metaprompt Gemini
+# META_POLUX — Metaprompt Gemini / Claude
 ## Oracle & Curation — PENTERACT DORN F01
-### STATUT : SCELLÉ — V4 — 2026-06-06
+### STATUT : SCELLÉ — V5 — 2026-06-06
 
 ---
 
@@ -10,31 +10,33 @@ Ce metaprompt est la **porte d'entrée absolue** du pipeline PENTERACT DORN.
 Il transforme un concept pop-culture en `plan_de_vol.json` V3 complet et exploitable,
 ainsi que les métadonnées YouTube prêtes à copier-coller.
 
-**S'exécute en chat manuel Gemini — aucun appel API dans le code.**
+**S'exécute en chat manuel Gemini ou Claude — aucun appel API dans le code.**
 
 ---
 
 ## Instructions d'utilisation
 
-1. Ouvre Gemini (chat.google.com ou Gemini Advanced)
-2. Copie-colle le bloc **PROMPT GEMINI** ci-dessous en entier
-3. Remplace les 4 balises `[INPUT_X]` par tes réponses réelles
-4. Envoie — Gemini génère le `plan_de_vol.json` complet + les métadonnées YouTube
+1. Ouvre Gemini (chat.google.com ou Gemini Advanced) ou Claude (claude.ai)
+2. Copie-colle le bloc **PROMPT** ci-dessous en entier
+3. Remplace les balises `[INPUT_X]` par tes réponses réelles
+4. INPUT_5 est **optionnel** — si tu n'as pas de vidéo de référence, laisse la balise vide ou supprime le bloc
+5. Envoie — le modèle génère le `plan_de_vol.json` complet + les métadonnées YouTube
 
 ---
 
-## Les 4 Inputs Opérateur
+## Les 5 Inputs Opérateur
 
-| # | Balise | Question | Exemple |
-|---|--------|----------|---------|
-| 1 | `[INPUT_1]` | Sujet + thèse en 1 phrase | `Messi est meilleur que CR7 grâce à son centre de gravité bas` |
-| 2 | `[INPUT_2]` | Réponse mathématique souhaitée | `Montrer que stabilité = f(hauteur centre de gravité)` |
-| 3 | `[INPUT_3]` | Assets PNG ou JPEG disponibles (noms de fichiers) | `messi_head.png, cr7_head.jpg` |
-| 4 | `[INPUT_4]` | Durée cible de la vidéo | `30 secondes` / `45 secondes` / `1 minute` |
+| # | Balise | Question | Exemple | Statut |
+|---|--------|----------|---------|--------|
+| 1 | `[INPUT_1]` | Sujet + thèse en 1 phrase | `Messi est meilleur que CR7 grâce à son centre de gravité bas` | Obligatoire |
+| 2 | `[INPUT_2]` | Réponse mathématique souhaitée | `Montrer que stabilité = f(hauteur centre de gravité)` | Obligatoire |
+| 3 | `[INPUT_3]` | Assets PNG ou JPEG disponibles (noms de fichiers) | `messi_head.png, cr7_head.jpg` | Obligatoire |
+| 4 | `[INPUT_4]` | Durée cible de la vidéo | `30 secondes` / `45 secondes` / `1 minute` | Obligatoire |
+| 5 | `[INPUT_5]` | URL ou fichier vidéo de référence cinématique | `https://youtube.com/watch?v=xxxxx` | **Optionnel** |
 
 ---
 
-## PROMPT GEMINI (copier-coller intégral)
+## PROMPT (copier-coller intégral)
 
 ```
 Tu es l'Oracle POLUX du pipeline PENTERACT DORN — un système de visualisation mathématique
@@ -56,6 +58,9 @@ INPUT 3 — Assets PNG ou JPEG disponibles :
 
 INPUT 4 — Durée cible :
 [INPUT_4]
+
+INPUT 5 — Vidéo de référence cinématique (optionnel) :
+[INPUT_5]
 
 === RÈGLES DE GÉNÉRATION ===
 
@@ -92,7 +97,7 @@ Paramètres à calculer :
     single_proof              → ease_in
 - pace_factor : 1.0 par défaut, ajustable si une courbe doit révéler plus vite
 
-ÉTAPE 4 — Génération du hook viral et des métadonnées
+ÉTAPE 4 — Génération du hook viral et des métadonnées concept
 - title : accroche courte, choc émotionnel
   → Maximum 45 caractères (emoji inclus)
   → Si format = "vertical" : titre ultra-court, tension maximale, emoji final
@@ -102,21 +107,77 @@ Paramètres à calculer :
 - hook : 1 phrase d'accroche narrative (tension + révélation mathématique)
 - thesis : la thèse mathématique en 1 phrase technique
 
-ÉTAPE 5 — Attribution des assets PNG ou JPEG
+ÉTAPE 5 — Génération du camera_plan
+Cette étape génère le plan caméra intégré directement dans le JSON.
+META_CAMERA est supprimé — tout se génère ici en une seule passe.
+
+5a — Calcul des bornes temporelles
+  reveal_frames = round((x_range.end - x_range.start) / step_per_frame)
+  total_frames = round(reveal_frames * complexity_coefficient) + final_freeze_frames
+  freeze_start = total_frames - final_freeze_frames
+
+5b — Détermination du movement_energy
+  Si INPUT_5 est fourni (URL ou fichier vidéo) :
+    Regarde la vidéo et analyse :
+    - L'intensité des mouvements de caméra (lent et posé / fluide et narratif / vif et dynamique / ultra-rapide avec cuts)
+    - La fréquence des changements de plan
+    - L'intensité du shake (tremblement)
+    - Le comportement du zoom (progressif / brusque / absent)
+    Déduis le movement_energy parmi : "calm" / "cinematic" / "aggressive" / "viral_edit"
+    Déduis shake_intensity entre 0.0 et 0.15
+
+  Si INPUT_5 est absent :
+    movement_energy = "cinematic" par défaut
+    shake_intensity = 0.08 par défaut
+
+5c — Construction des segments selon engine_type
+
+  time_evolution_comparison (3 segments) :
+    SEG 1 [0 → round(reveal_frames * 0.7)]         : follow_asset sur la courbe dominante, zoom 1.15, shake 0.03
+    SEG 2 [suite → freeze_start]                   : wide_reveal (montre l'écart), zoom 0.95, shake 0.02
+    SEG 3 [freeze_start → total_frames]            : final_proof_lock, zoom 1.0, shake 0.0
+
+  geometric_construction (3 segments) :
+    SEG 1 [0 → round(reveal_frames * 0.5)]         : follow_curve_tip, zoom 1.2, shake 0.02
+    SEG 2 [suite → freeze_start]                   : wide_reveal, zoom 0.9, shake 0.01
+    SEG 3 [freeze_start → total_frames]            : final_proof_lock, zoom 1.0, shake 0.0
+
+  wave_analysis (2 segments) :
+    SEG 1 [0 → freeze_start]                       : static, zoom 1.0, shake 0.0
+    SEG 2 [freeze_start → total_frames]            : final_proof_lock, zoom 1.0, shake 0.0
+
+  single_proof (3 segments) :
+    SEG 1 [0 → round(reveal_frames * 0.6)]         : follow_curve_tip, zoom 1.1, shake 0.02
+    SEG 2 [suite → freeze_start]                   : push_in, zoom 1.3, shake 0.03
+    SEG 3 [freeze_start → total_frames]            : final_proof_lock, zoom 1.0, shake 0.0
+
+  Si movement_energy = "viral_edit" : appliquer shake entre 0.08 et 0.12 sur tous les segments sauf final_proof_lock.
+  Si movement_energy = "calm" : réduire tous les shake à 0.0 ou 0.01, zoom plus proche de 1.0.
+  Si movement_energy = "aggressive" : augmenter shake à 0.08–0.12, zoom plus marqué sur SEG 1.
+
+5d — Règles impératives camera_plan
+  - Le dernier segment DOIT toujours être mode "final_proof_lock", shake 0.0
+  - start_frame du dernier segment = freeze_start
+  - end_frame du dernier segment = total_frames
+  - Les segments couvrent [0, total_frames] sans trou ni chevauchement
+  - zoom entre 0.9 et 1.5 — shake entre 0.0 et 0.15 — x_offset et y_offset entre -100 et 100
+  - target_curve_id rempli uniquement pour follow_asset et follow_curve_tip
+
+ÉTAPE 6 — Attribution des assets PNG ou JPEG
 Pour chaque fichier PNG, JPG ou JPEG listé en INPUT 3, associe-le à la courbe la plus pertinente.
 `asset_filename` accepte les extensions `.png`, `.jpg`, `.jpeg`.
 scale_factor = 1.2, auto_rotate_slope = true, inertia_smooth = 0.1
 
-ÉTAPE 6 — Génération de la final_frame
+ÉTAPE 7 — Génération de la final_frame
 - annotation : texte de conclusion mathématique court (15 mots max)
 - freeze_duration_frames = 90 (fixe)
 
-ÉTAPE 7 — Audio
+ÉTAPE 8 — Audio
 - wave_type = "sine"
 - base_frequency_hz = 220
 - frequency_multiplier = 12.0
 
-ÉTAPE 8 — Génération des métadonnées YouTube
+ÉTAPE 9 — Génération des métadonnées YouTube
 Génère le bloc `youtube_metadata` avec les règles suivantes.
 
 Champ `title` :
@@ -203,7 +264,7 @@ Remplis TOUS les champs. Ne laisse aucun champ vide.
     }
   ],
   "camera_plan": {
-    "camera_signature": "DORN_META_CAMERA_V1",
+    "camera_signature": "DORN_META_POLUX_V5",
     "global_style": {
       "movement_energy": "",
       "default_easing": "easeInOutCubic",
@@ -241,7 +302,7 @@ Remplis TOUS les champs. Ne laisse aucun champ vide.
 
 ---
 
-## Exemple de Sortie Attendue (Messi vs CR7 — 30 secondes)
+## Exemple de Sortie Attendue (Messi vs CR7 — 30 secondes — sans vidéo référence)
 
 ```json
 {
@@ -314,7 +375,7 @@ Remplis TOUS les champs. Ne laisse aucun champ vide.
     }
   ],
   "camera_plan": {
-    "camera_signature": "DORN_META_CAMERA_V1",
+    "camera_signature": "DORN_META_POLUX_V5",
     "global_style": {
       "movement_energy": "cinematic",
       "default_easing": "easeInOutCubic",
@@ -323,13 +384,23 @@ Remplis TOUS les champs. Ne laisse aucun champ vide.
     "camera_segments": [
       {
         "start_frame": 0,
-        "end_frame": 1620,
+        "end_frame": 1134,
         "mode": "follow_asset",
         "target_curve_id": "messi",
         "zoom": 1.15,
         "x_offset": 0,
         "y_offset": -40,
         "shake": 0.03
+      },
+      {
+        "start_frame": 1134,
+        "end_frame": 1620,
+        "mode": "wide_reveal",
+        "target_curve_id": "",
+        "zoom": 0.95,
+        "x_offset": 0,
+        "y_offset": 0,
+        "shake": 0.02
       },
       {
         "start_frame": 1620,
@@ -372,8 +443,23 @@ Avant de déposer le JSON dans `F01_POLUX/IN/`, vérifie manuellement :
 - [ ] Au moins 1 courbe dans `reactor_curves`
 - [ ] `math_input` en format math.js (pas Python, pas LaTeX)
 - [ ] Tous les PNG/JPEG listés en INPUT 3 sont associés à une courbe
+- [ ] `camera_plan` présent — segments couvrent [0, total_frames], dernier segment = `final_proof_lock`, shake = 0.0
+- [ ] `camera_signature` = `"DORN_META_POLUX_V5"`
 - [ ] `youtube_metadata` présent — titre ≤ 45 chars, 3 hashtags, description 4 blocs
 
 ---
 
-*SCELLÉ — PENTERACT DORN V4 — VIIe Légion — 2026-06-06*
+## Modes caméra disponibles (référence F03)
+
+| mode | Comportement dans VirtualCamera.jsx |
+|------|-------------------------------------|
+| `static` | Caméra fixe, aucun mouvement |
+| `follow_asset` | Suit le PNG attaché à une courbe |
+| `follow_curve_tip` | Suit l'extrémité mathématique de la courbe |
+| `wide_reveal` | Zoom arrière progressif — révèle la construction complète |
+| `push_in` | Zoom progressif vers la preuve finale |
+| `final_proof_lock` | Dernière frame figée — aucun mouvement, shake 0.0 |
+
+---
+
+*SCELLÉ — PENTERACT DORN V5 — VIIe Légion — 2026-06-06*
