@@ -59,12 +59,18 @@ def save_json(data, path):
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 # ─── Canvas HTML ───────────────────────────────────────────────────────────────
+# FIX: camera_on parameter persists camera state across Streamlit rerenders.
+# FIX: JSON is injected via <script type="application/json"> to avoid
+#      string-escaping bugs (emoji, special chars, \n in description) that
+#      caused JSON.parse to throw a SyntaxError and leave the canvas black.
 
-def build_canvas_html(data):
+def build_canvas_html(data, camera_on=False):
     fmt = data.get("concept_metadata", {}).get("format", "vertical")
     cw, ch = (360, 460) if fmt == "vertical" else (560, 300)
-    cfg = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
-    json_str = cfg.replace("'", "\\'")
+
+    # Safe JSON injection — no string-quoting issues
+    json_block = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+    cam_init   = "true" if camera_on else "false"
 
     return f"""<!DOCTYPE html><html><head><meta charset="utf-8">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
@@ -83,6 +89,7 @@ canvas{{display:block;margin:0 auto;background:#0a0a0f}}
 .snap-label{{font-size:9px;color:#444;margin-top:2px}}
 #segBar{{font-size:9px;color:#333;text-align:center;margin:3px 0;line-height:1.8}}
 </style></head><body>
+<script type="application/json" id="polux-cfg">{json_block}</script>
 <div id="ttl"></div>
 <canvas id="sim" width="{cw}" height="{ch}"></canvas>
 <input type="range" id="slider" min="0" max="1000" value="500">
@@ -96,7 +103,8 @@ canvas{{display:block;margin:0 auto;background:#0a0a0f}}
   <div class="snap-item"><canvas id="s2" width="{cw}" height="{ch}"></canvas><div class="snap-label" id="l2">—</div></div>
 </div>
 <script>
-const C=JSON.parse('{json_str}');
+// Safe JSON load — immune to emoji, special chars, \n in strings
+const C=JSON.parse(document.getElementById('polux-cfg').textContent);
 const cam=C.camera_plan||null;
 const hud=C.hud_config||{{}};
 const cnv=document.getElementById('sim'),ctx=cnv.getContext('2d');
@@ -109,9 +117,16 @@ const fps=t.fps??60,spf=t.step_per_frame??0.05;
 const cc=t.complexity_coefficient??1.0,frz=t.final_freeze_frames??180;
 const revF=Math.round((xE-xS)/spf),totF=Math.round(revF*cc)+frz;
 const geo=C.space_environment?.geometry_mode??'cartesian';
-let cameraMode=false;
+// FIX: initialised from Python-side toggle — survives Streamlit rerenders
+let cameraMode={cam_init};
 
 // ─── Camera ──────────────────────────────────────────────────────────────────
+
+function updateCamBtn(){{
+  const btn=document.getElementById('camBtn');
+  btn.textContent='CAMERA : '+(cameraMode?'ON':'OFF');
+  btn.className=cameraMode?'on':'';
+}}
 
 function getActiveSeg(frame){{
   if(!cam)return null;
@@ -122,9 +137,7 @@ function getActiveSeg(frame){{
 
 function toggleCam(){{
   cameraMode=!cameraMode;
-  const btn=document.getElementById('camBtn');
-  btn.textContent='CAMERA : '+(cameraMode?'ON':'OFF');
-  btn.className=cameraMode?'on':'';
+  updateCamBtn();
   if(!cam){{inf.textContent='WARN: aucun camera_plan dans le JSON.';return;}}
   draw(sld.value/1000);
 }}
@@ -187,7 +200,7 @@ function hexToRgba(hex,alpha){{
 }}
 
 function drawGrid(mn,mx){{
-  const gc=hud.grid_color||'#151525';
+  const gc=hud.grid_color||'#1a1a35';
   const go=hud.grid_opacity??1.0;
   const glw=hud.grid_line_width||1;
   const alc=hud.axis_label_color||'#888888';
@@ -356,6 +369,8 @@ function generateSnapshots(){{
   document.getElementById('snapBtn').style.borderColor='#00FFD1';
 }}
 
+// ─── Init ────────────────────────────────────────────────────────────────────
+updateCamBtn();
 sld.addEventListener('input',()=>draw(sld.value/1000));
 draw(0.5);
 </script></body></html>"""
@@ -451,7 +466,7 @@ def main():
 
         st.markdown("### Grille & Axes")
         hud = data.setdefault("hud_config", {})
-        hud["grid_color"] = st.color_picker("Couleur grille", value=hud.get("grid_color", "#151525"), key="gc")
+        hud["grid_color"] = st.color_picker("Couleur grille", value=hud.get("grid_color", "#1a1a35"), key="gc")
         hud["grid_opacity"] = st.slider("Opacité grille", 0.0, 1.0, float(hud.get("grid_opacity", 1.0)), 0.05, key="go")
         hud["grid_line_width"] = st.slider("Épaisseur lignes grille", 0.5, 3.0, float(hud.get("grid_line_width", 1.0)), 0.5, key="glw")
         hud["axis_label_color"] = st.color_picker("Couleur labels axes", value=hud.get("axis_label_color", "#888888"), key="alc")
@@ -511,8 +526,8 @@ def main():
 
         st.markdown("### Camera Plan")
         cam_data = data.get("camera_plan")
-        cam_on = st.toggle("Camera ON/OFF", value=bool(cam_data), key="cam_on")
-        if cam_on:
+        cam_json_on = st.toggle("Inclure camera_plan dans le JSON", value=bool(cam_data), key="cam_json_on")
+        if cam_json_on:
             if not cam_data:
                 data["camera_plan"] = {
                     "global_style": {
@@ -566,11 +581,20 @@ def main():
         st.markdown("### Simulation Canvas")
         st.caption(
             "Scrubber : parcourir l'animation. "
-            "**CAMERA ON** : active le transform caméra en temps réel. "
-            "**SNAPSHOTS** : captures aux frames clés avec caméra active."
+            "**CAMÉRA ON** : active le transform caméra. "
+            "**SNAPSHOTS** : captures aux frames clés."
         )
+
+        # FIX: camera state stored in session_state → survives Streamlit rerenders
+        cam_preview = st.toggle(
+            "CAMÉRA ON",
+            value=st.session_state.get("cam_preview_state", False),
+            key="cam_preview_state",
+            help="Stable entre les rerenders. Correspond au bouton CAMERA dans le canvas."
+        )
+
         canvas_height = 700 if cm.get("format") == "vertical" else 460
-        components.html(build_canvas_html(data), height=canvas_height, scrolling=False)
+        components.html(build_canvas_html(data, cam_preview), height=canvas_height, scrolling=False)
 
         if data.get("validated_by_magos"):
             ts = data.get("validation_timestamp", "—")
