@@ -16,7 +16,7 @@
 
 ## Schémas JSON — Contrats de Données
 
-### plan_de_vol.json — VERSION F01 OUT (produit par META_POLUX + validé par F01)
+### plan_de_vol.json — VERSION F01 OUT (produit par META_POLUX V5 + validé par F01)
 
 ```json
 {
@@ -67,27 +67,8 @@
       }
     }
   ],
-  "final_frame": {
-    "annotation": "string — texte de conclusion mathématique",
-    "freeze_duration_frames": 90
-  },
-  "audio_synthesizer": {
-    "wave_type": "sine | square | sawtooth",
-    "base_frequency_hz": 220,
-    "frequency_multiplier": 12.0
-  }
-}
-```
-
-### plan_de_vol.json — VERSION F02 OUT (figé par CASTELLAN)
-
-Même schéma + ajout du bloc `camera_plan` (injecté par META_CAMERA) et :
-
-```json
-{
-  "...": "...",
   "camera_plan": {
-    "camera_signature": "DORN_META_CAMERA_V1",
+    "camera_signature": "DORN_META_POLUX_V5",
     "global_style": {
       "movement_energy": "calm | cinematic | aggressive | viral_edit",
       "default_easing": "easeInOutCubic",
@@ -106,6 +87,28 @@ Même schéma + ajout du bloc `camera_plan` (injecté par META_CAMERA) et :
       }
     ]
   },
+  "final_frame": {
+    "annotation": "string — texte de conclusion mathématique",
+    "freeze_duration_frames": 90
+  },
+  "audio_synthesizer": {
+    "wave_type": "sine | square | sawtooth",
+    "base_frequency_hz": 220,
+    "frequency_multiplier": 12.0
+  }
+}
+```
+
+> Note V5 : `camera_plan` est désormais généré directement par META_POLUX (ÉTAPE 5).
+> `camera_signature` = `"DORN_META_POLUX_V5"`. META_CAMERA est supprimé.
+
+### plan_de_vol.json — VERSION F02 OUT (figé par CASTELLAN)
+
+Même schéma + `validated_by_magos: true` positionné par F02 au moment de la sauvegarde.
+
+```json
+{
+  "...": "...",
   "validated_by_magos": true
 }
 ```
@@ -122,6 +125,9 @@ total_frames  = reveal_frames × complexity_coefficient + final_freeze_frames
 
 // Calcul inverse (META_POLUX) :
 step_per_frame = x_range / (target_duration_seconds × fps − final_freeze_frames)
+
+// Camera plan (META_POLUX V5 ÉTAPE 5) :
+freeze_start = total_frames - final_freeze_frames
 ```
 
 | engine_type | complexity_coefficient |
@@ -138,9 +144,8 @@ step_per_frame = x_range / (target_duration_seconds × fps − final_freeze_fram
 | Source | Destination | Fichiers transférés |
 |--------|-------------|---------------------|
 | SHARED | F01 IN | images/*.png |
-| META_POLUX (Gemini chat) | F01 IN | plan_de_vol.json |
+| META_POLUX (Gemini/Claude chat, 5 inputs) | F01 IN | plan_de_vol.json (math + camera_plan intégré) |
 | F01 OUT | F02 IN | plan_de_vol.json + images/*.png (EXIF propres) |
-| META_CAMERA (Gemini chat) | F02 IN | injection camera_plan dans plan_de_vol.json |
 | F02 OUT | F03 IN | plan_de_vol.json (figé, validated_by_magos) + images/*.png/*.jpg/*.jpeg |
 | F03 OUT | F04 IN | video_render.mp4 |
 | F02 OUT | F04 IN | plan_de_vol.json (pour format + titre + playback_speed) |
