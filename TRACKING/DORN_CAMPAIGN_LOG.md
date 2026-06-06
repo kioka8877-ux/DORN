@@ -14,13 +14,12 @@
 | F03 | SIGISMUND | Réacteur Multi-Formes → video_render.mp4 | SCELLÉ ✓ | 2026-06-05 |
 | F04A | INWIT | Viewer + Speed Control | SCELLÉ ✓ | 2026-06-05 |
 | F04B | INWIT | FFmpeg Finishing → youtube_*.mp4 | SCELLÉ ✓ | 2026-06-05 |
-| META | POLUX | Metaprompt Gemini (4 inputs) | EN FORGE | — |
-| META | CAMERA | Metaprompt caméra | EN FORGE | — |
+| META | POLUX | Metaprompt Gemini/Claude (5 inputs — camera intégré) | EN FORGE — V5 en cours | — |
 
 **Compteur de Guerre :**
 ```
 [████] 4/4 frégates scellées ██████████ 100%
-[░░]   0/2 metaprompts scellés
+[░]    0/1 metaprompt scellé (META_CAMERA absorbé dans V5)
 [████] 4/4 tests de production réussis ██████████ 100%
 ```
 
@@ -88,6 +87,8 @@
 | 2026-06-05 | F04B | PROD | FFmpeg Finishing — setpts=PTS/0.5 | ✓ |
 | 2026-06-05 | F04B | PROD | Contrôle qualité youtube_short.mp4 — PROPRE | ✓ |
 | 2026-06-05 | F04B | SCELLEMENT | F04B INWIT scellé | ✓ |
+| 2026-06-06 | META_POLUX | FORGE | META_POLUX V4 → V5 : ÉTAPE 5 caméra intégrée, 5 inputs | ✓ |
+| 2026-06-06 | META_CAMERA | SUPPRESSION | META_CAMERA.md supprimé — absorbé dans META_POLUX V5 | ✓ |
 | 2026-06-05 | DORN | SCELLEMENT | PROJET DORN SCELLÉ DANS SON ENTIER | ✓ |
 
 ---
@@ -207,12 +208,9 @@ Toutes les frégates en phase de FORGE.
 ## Flux de Données DORN
 
 ```
-META_POLUX (Gemini chat, 4 inputs)
-  └─► plan_de_vol.json ──────────────────► F01 IN/
+META_POLUX (Gemini/Claude chat, 5 inputs — camera_plan intégré)
+  └─► plan_de_vol.json (math + camera) ────► F01 IN/
                                             F02 IN/ (après F01)
-
-META_CAMERA (Gemini chat)
-  └─► camera_plan injecté dans JSON ──────► F02 IN/
 
 F01 POLUX    OUT/ plan_de_vol.json ─────► F02 IN/
 F02 CASTELLAN OUT/ plan_de_vol.json ────► F03 IN/
@@ -257,6 +255,7 @@ F04 INWIT     OUT/ youtube_*.mp4 ───────► Téléchargement opér
 | 2026-05-29 | Streamlit pour F02 (vs Flask CRUSADER) | Canvas JS natif Streamlit |
 | 2026-05-29 | Timing dynamique (math → durée) | La courbe dicte la composition |
 | 2026-05-29 | step_per_frame calculé par Gemini | Opérateur donne durée cible |
+| 2026-06-06 | META_CAMERA absorbé dans META_POLUX V5 | Un seul chat Gemini/Claude — INPUT_5 vidéo référence optionnel |
 | 2026-05-29 | F04 scindé F04A + F04B | Viewer de validation avant encoding final |
 | 2026-05-29 | playback_speed 1.0 → FFmpeg setpts conditionnel | Skip re-encode si speed=1.0 |
 | 2026-05-29 | complexity_coefficient par engine_type | Gemini adapte le rythme |
@@ -269,6 +268,8 @@ F04 INWIT     OUT/ youtube_*.mp4 ───────► Téléchargement opér
 
 | Date | Frégate | Phase | Action | Validé |
 |------|---------|-------|--------|--------|
+| 2026-06-06 | META_POLUX | FORGE | META_POLUX V4 → V5 : ÉTAPE 5 caméra intégrée, 5 inputs | ✓ |
+| 2026-06-06 | META_CAMERA | SUPPRESSION | META_CAMERA.md supprimé — absorbé dans META_POLUX V5 | ✓ |
 | 2026-06-05 | DORN | SCELLEMENT | PROJET DORN SCELLÉ DANS SON ENTIER | ✓ |
 | 2026-06-05 | F04B | PROD | FFmpeg Finishing + contrôle qualité — SCELLÉ | ✓ |
 | 2026-06-05 | F04A | PROD | Viewer vitesse + CRS_CUSTOS — SCELLÉ | ✓ |
@@ -301,5 +302,6 @@ F04 INWIT     OUT/ youtube_*.mp4 ───────► Téléchargement opér
 - Output : youtube_short.mp4 — 3.50 MB — H.264 — camouflage Lavf58.76.100
 
 ## METAPROMPTS
-- META_POLUX.md + META_CAMERA.md
-- Statut : EN FORGE
+- META_POLUX.md — V5 en cours (5 inputs, camera intégré)
+- META_CAMERA.md — **SUPPRIMÉ** — règles absorbées dans META_POLUX V5 ÉTAPE 5
+
