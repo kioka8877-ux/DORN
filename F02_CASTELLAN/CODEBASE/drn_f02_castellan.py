@@ -17,6 +17,7 @@ Sorties  : F02_CASTELLAN/OUT/plan_de_vol.json  (validated_by_magos: true)
 """
 
 import argparse
+import base64
 import datetime
 import json
 import os
@@ -59,18 +60,20 @@ def save_json(data, path):
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 # ─── Canvas HTML ───────────────────────────────────────────────────────────────
+# FIX: JSON injected as base64 via data attribute — bulletproof against any
+#      character (emoji, special chars, HTML sequences, surrogates) that would
+#      make JSON.parse throw a SyntaxError and leave the canvas black.
 # FIX: camera_on parameter persists camera state across Streamlit rerenders.
-# FIX: JSON is injected via <script type="application/json"> to avoid
-#      string-escaping bugs (emoji, special chars, \n in description) that
-#      caused JSON.parse to throw a SyntaxError and leave the canvas black.
 
 def build_canvas_html(data, camera_on=False):
     fmt = data.get("concept_metadata", {}).get("format", "vertical")
     cw, ch = (360, 460) if fmt == "vertical" else (560, 300)
 
-    # Safe JSON injection — no string-quoting issues
-    json_block = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
-    cam_init   = "true" if camera_on else "false"
+    # Base64 — zero HTML-context issue possible
+    json_b64 = base64.b64encode(
+        json.dumps(data, ensure_ascii=False).encode("utf-8")
+    ).decode("ascii")
+    cam_init = "true" if camera_on else "false"
 
     return f"""<!DOCTYPE html><html><head><meta charset="utf-8">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
@@ -89,7 +92,7 @@ canvas{{display:block;margin:0 auto;background:#0a0a0f}}
 .snap-label{{font-size:9px;color:#444;margin-top:2px}}
 #segBar{{font-size:9px;color:#333;text-align:center;margin:3px 0;line-height:1.8}}
 </style></head><body>
-<script type="application/json" id="polux-cfg">{json_block}</script>
+<meta id="polux-cfg" data-cfg="{json_b64}">
 <div id="ttl"></div>
 <canvas id="sim" width="{cw}" height="{ch}"></canvas>
 <input type="range" id="slider" min="0" max="1000" value="500">
@@ -103,8 +106,8 @@ canvas{{display:block;margin:0 auto;background:#0a0a0f}}
   <div class="snap-item"><canvas id="s2" width="{cw}" height="{ch}"></canvas><div class="snap-label" id="l2">—</div></div>
 </div>
 <script>
-// Safe JSON load — immune to emoji, special chars, \n in strings
-const C=JSON.parse(document.getElementById('polux-cfg').textContent);
+// Base64 decode — immune to any character that could corrupt HTML script context
+const C=JSON.parse(atob(document.getElementById('polux-cfg').dataset.cfg));
 const cam=C.camera_plan||null;
 const hud=C.hud_config||{{}};
 const cnv=document.getElementById('sim'),ctx=cnv.getContext('2d');
@@ -617,4 +620,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
