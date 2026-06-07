@@ -80,8 +80,8 @@ canvas{{display:block;margin:0 auto;background:#0a0a0f}}
 #slider{{width:100%;margin:6px 0;accent-color:#00FFD1}}
 #info{{text-align:center;font-size:11px;color:#777;margin-bottom:3px}}
 #ttl{{text-align:center;font-size:12px;color:#eee;margin-bottom:5px;font-weight:bold}}
-#camBtn{{display:block;margin:4px auto;padding:4px 20px;background:#1a1a2e;border:1px solid #00FFD1;color:#00FFD1;cursor:pointer;font-family:monospace;font-size:11px;letter-spacing:1px}}
-#camBtn.on{{background:#00FFD1;color:#0a0a0f;font-weight:bold}}
+#camBtn{{display:block;margin:4px auto;padding:4px 20px;background:#1a1a2e;border:1px solid #333355;color:#555577;font-family:monospace;font-size:11px;letter-spacing:1px;cursor:default;pointer-events:none}}
+#camBtn.on{{background:#00FFD1;color:#0a0a0f;font-weight:bold;border-color:#00FFD1}}
 #snapBtn{{display:block;margin:8px auto;padding:3px 14px;background:#1a1a2e;border:1px solid #333;color:#555;cursor:pointer;font-family:monospace;font-size:10px}}
 .snaps{{display:flex;gap:4px;justify-content:center;margin-top:6px}}
 .snap-item{{flex:1;text-align:center}}
@@ -94,7 +94,7 @@ canvas{{display:block;margin:0 auto;background:#0a0a0f}}
 <canvas id="sim" width="{cw}" height="{ch}"></canvas>
 <input type="range" id="slider" min="0" max="1000" value="500">
 <div id="info">x=0 | t=0.00s | frame 0</div>
-<button id="camBtn" onclick="toggleCam()">CAMERA : OFF</button>
+<button id="camBtn">CAMERA : OFF</button>
 <div id="segBar"></div>
 <button id="snapBtn" onclick="generateSnapshots()">[ GÉNÉRER SNAPSHOTS CAMÉRA ]</button>
 <div class="snaps">
@@ -135,8 +135,9 @@ function getActiveSeg(frame){{
   return segs.length?segs[segs.length-1]:null;
 }}
 
+// toggleCam est piloté uniquement par le toggle Streamlit (col_sim).
+// Le bouton #camBtn est un indicateur read-only — pas de onclick.
 function toggleCam(){{
-  cameraMode=!cameraMode;
   updateCamBtn();
   if(!cam){{inf.textContent='WARN: aucun camera_plan dans le JSON.';return;}}
   draw(sld.value/1000);
@@ -200,30 +201,40 @@ function hexToRgba(hex,alpha){{
 }}
 
 function drawGrid(mn,mx){{
-  const gc=hud.grid_color||'#1a1a35';
-  const go=hud.grid_opacity??1.0;
+  const gc=hud.grid_color||'#2a2a4a';
+  const go=hud.grid_opacity??0.8;
   const glw=hud.grid_line_width||1;
-  const alc=hud.axis_label_color||'#888888';
-  const als=hud.axis_label_size_px||10;
+  const alc=hud.axis_label_color||'#aaaaaa';
+  const als=hud.axis_label_size_px||12;
   const alf=hud.axis_label_font||'monospace';
+
+  // Cadre de la zone de tracé (toujours visible)
+  ctx.strokeStyle='#3a3a5a';ctx.lineWidth=1.5;
+  ctx.strokeRect(PL,PT,PW,PHT);
+
+  // Lignes de grille intérieures
   ctx.strokeStyle=hexToRgba(gc,go);ctx.lineWidth=glw;
-  for(let i=0;i<=5;i++){{const x=PL+(i/5)*PW;ctx.beginPath();ctx.moveTo(x,PT);ctx.lineTo(x,PT+PHT);ctx.stroke();}}
-  for(let i=0;i<=4;i++){{const y=PT+(i/4)*PHT;ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(PL+PW,y);ctx.stroke();}}
-  if(hud.show_center_axis){{
-    const cac=hud.center_axis_color||'#333355';
-    ctx.strokeStyle=cac;ctx.lineWidth=1.5;
-    const cx=PL+((0-xS)/(xE-xS))*PW;
-    if(cx>=PL&&cx<=PL+PW){{ctx.beginPath();ctx.moveTo(cx,PT);ctx.lineTo(cx,PT+PHT);ctx.stroke();}}
-    const cy=PT+(1-(0-mn)/(mx-mn))*PHT;
-    if(cy>=PT&&cy<=PT+PHT){{ctx.beginPath();ctx.moveTo(PL,cy);ctx.lineTo(PL+PW,cy);ctx.stroke();}}
-  }}
+  for(let i=1;i<=4;i++){{const x=PL+(i/5)*PW;ctx.beginPath();ctx.moveTo(x,PT);ctx.lineTo(x,PT+PHT);ctx.stroke();}}
+  for(let i=1;i<=3;i++){{const y=PT+(i/4)*PHT;ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(PL+PW,y);ctx.stroke();}}
+
+  // Axes x=0 et y=0 — toujours tracés s'ils sont dans la plage visible
+  const axisColor=hud.center_axis_color||'#555580';
+  ctx.strokeStyle=axisColor;ctx.lineWidth=1.5;
+  const cx=PL+((0-xS)/(xE-xS))*PW;
+  if(cx>=PL&&cx<=PL+PW){{ctx.beginPath();ctx.moveTo(cx,PT);ctx.lineTo(cx,PT+PHT);ctx.stroke();}}
+  const cy=PT+(1-(0-mn)/(mx-mn))*PHT;
+  if(cy>=PT&&cy<=PT+PHT){{ctx.beginPath();ctx.moveTo(PL,cy);ctx.lineTo(PL+PW,cy);ctx.stroke();}}
+
+  // Labels axes
   ctx.fillStyle=alc;ctx.font=`${{als}}px ${{alf}}`;ctx.textAlign='center';
-  for(let i=0;i<=5;i++)ctx.fillText((xS+(i/5)*(xE-xS)).toFixed(1),PL+(i/5)*PW,PT+PHT+14);
+  for(let i=0;i<=5;i++)ctx.fillText((xS+(i/5)*(xE-xS)).toFixed(1),PL+(i/5)*PW,PT+PHT+16);
   ctx.textAlign='right';
-  for(let i=0;i<=4;i++)ctx.fillText((mx-(i/4)*(mx-mn)).toFixed(1),PL-4,PT+(i/4)*PHT+4);
+  for(let i=0;i<=4;i++)ctx.fillText((mx-(i/4)*(mx-mn)).toFixed(2),PL-6,PT+(i/4)*PHT+4);
+
+  // Titres des axes
   ctx.fillStyle=alc;ctx.font=`${{als}}px ${{alf}}`;ctx.textAlign='center';
-  ctx.fillText(C.space_environment?.x_label||'x',W/2,H-2);
-  ctx.save();ctx.translate(11,H/2);ctx.rotate(-Math.PI/2);
+  ctx.fillText(C.space_environment?.x_label||'x',W/2,H-4);
+  ctx.save();ctx.translate(13,H/2);ctx.rotate(-Math.PI/2);
   ctx.fillText(C.space_environment?.y_label||'y',0,0);ctx.restore();
 }}
 
@@ -466,7 +477,7 @@ def main():
 
         st.markdown("### Grille & Axes")
         hud = data.setdefault("hud_config", {})
-        hud["grid_color"] = st.color_picker("Couleur grille", value=hud.get("grid_color", "#1a1a35"), key="gc")
+        hud["grid_color"] = st.color_picker("Couleur grille", value=hud.get("grid_color", "#2a2a4a"), key="gc")
         hud["grid_opacity"] = st.slider("Opacité grille", 0.0, 1.0, float(hud.get("grid_opacity", 1.0)), 0.05, key="go")
         hud["grid_line_width"] = st.slider("Épaisseur lignes grille", 0.5, 3.0, float(hud.get("grid_line_width", 1.0)), 0.5, key="glw")
         hud["axis_label_color"] = st.color_picker("Couleur labels axes", value=hud.get("axis_label_color", "#888888"), key="alc")
@@ -581,7 +592,8 @@ def main():
         st.markdown("### Simulation Canvas")
         st.caption(
             "Scrubber : parcourir l'animation. "
-            "**CAMÉRA ON** : active le transform caméra. "
+            "Toggle **CAMÉRA ON** ci-dessous = seul contrôle caméra (stable entre rerenders). "
+            "L'indicateur dans le canvas est en lecture seule. "
             "**SNAPSHOTS** : captures aux frames clés."
         )
 
@@ -605,3 +617,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
