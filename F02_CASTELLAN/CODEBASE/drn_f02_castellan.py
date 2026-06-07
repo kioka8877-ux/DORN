@@ -65,13 +65,16 @@ def save_json(data, path):
 #      make JSON.parse throw a SyntaxError and leave the canvas black.
 # FIX: camera_on parameter persists camera state across Streamlit rerenders.
 
-def build_canvas_html(data, camera_on=False):
+def build_canvas_html(data, camera_on=False, image_map=None):
     fmt = data.get("concept_metadata", {}).get("format", "vertical")
     cw, ch = (360, 460) if fmt == "vertical" else (560, 300)
 
     # Base64 — zero HTML-context issue possible
     json_b64 = base64.b64encode(
         json.dumps(data, ensure_ascii=False).encode("utf-8")
+    ).decode("ascii")
+    imgs_b64 = base64.b64encode(
+        json.dumps(image_map or {}, ensure_ascii=False).encode("utf-8")
     ).decode("ascii")
     cam_init = "true" if camera_on else "false"
 
@@ -93,6 +96,7 @@ canvas{{display:block;margin:0 auto;background:#0a0a0f}}
 #segBar{{font-size:9px;color:#333;text-align:center;margin:3px 0;line-height:1.8}}
 </style></head><body>
 <meta id="polux-cfg" data-cfg="{json_b64}">
+<meta id="polux-imgs" data-imgs="{imgs_b64}">
 <div id="ttl"></div>
 <canvas id="sim" width="{cw}" height="{ch}"></canvas>
 <input type="range" id="slider" min="0" max="1000" value="500">
@@ -264,6 +268,15 @@ function drawCartCurve(c,xCur,mn,mx){{
     ctx.fillText(c.math_input||'',lx+8,ly-8);
     ctx.restore();
   }}
+  const tt=c.tracking_target;
+  if(tt?.show_asset&&tt.asset_filename&&imgMap[tt.asset_filename]){{
+    const img=imgMap[tt.asset_filename];
+    const sc=Math.max(0.3,Math.min(tt.scale_factor??1.2,3.0));
+    const ih=50*sc,iw=(img.naturalWidth/Math.max(img.naturalHeight,1))*ih;
+    ctx.save();ctx.globalAlpha=0.9;
+    ctx.drawImage(img,lx-iw/2,ly-ih/2,iw,ih);
+    ctx.restore();
+  }}
   return[lx,ly];
 }}
 
@@ -383,10 +396,26 @@ function generateSnapshots(){{
   document.getElementById('snapBtn').style.borderColor='#00FFD1';
 }}
 
+// ─── Image preload ────────────────────────────────────────────────────────────
+const imgData=JSON.parse(atob(document.getElementById('polux-imgs').dataset.imgs));
+const imgMap={{}};
+function preloadImages(){{
+  const entries=Object.entries(imgData);
+  if(!entries.length){{bootCanvas();return;}}
+  let rem=entries.length;
+  entries.forEach(([name,uri])=>{{
+    const img=new Image();
+    img.onload=img.onerror=()=>{{imgMap[name]=img;rem--;if(!rem)bootCanvas();}};
+    img.src=uri;
+  }});
+}}
 // ─── Init ────────────────────────────────────────────────────────────────────
-updateCamBtn();
-sld.addEventListener('input',()=>draw(sld.value/1000));
-draw(0.5);
+function bootCanvas(){{
+  updateCamBtn();
+  sld.addEventListener('input',()=>draw(sld.value/1000));
+  draw(0.5);
+}}
+preloadImages();
 </script></body></html>"""
 
 
@@ -609,7 +638,24 @@ def main():
         )
 
         canvas_height = 700 if cm.get("format") == "vertical" else 460
-        components.html(build_canvas_html(data, cam_preview), height=canvas_height, scrolling=False)
+        images_dir = os.path.join(base, "F02_CASTELLAN", "IN", "images")
+        image_map: dict = {}
+        for c in data.get("reactor_curves", []):
+            tt = c.get("tracking_target", {})
+            if tt.get("show_asset") and tt.get("asset_filename"):
+                fname = tt["asset_filename"]
+                if fname not in image_map:
+                    fpath = os.path.join(images_dir, fname)
+                    if os.path.exists(fpath):
+                        with open(fpath, "rb") as img_f:
+                            raw = img_f.read()
+                        ext = fname.rsplit(".", 1)[-1].lower()
+                        mime = "image/jpeg" if ext in ("jpg", "jpeg") else "image/png"
+                        image_map[fname] = (
+                            f"data:{mime};base64,"
+                            + base64.b64encode(raw).decode("ascii")
+                        )
+        components.html(build_canvas_html(data, cam_preview, image_map), height=canvas_height, scrolling=False)
 
         if data.get("validated_by_magos"):
             ts = data.get("validation_timestamp", "—")
@@ -620,5 +666,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
