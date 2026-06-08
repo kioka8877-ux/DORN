@@ -39,14 +39,10 @@ FONTS           = ["monospace", "serif", "sans-serif"]
 # ─── Args ──────────────────────────────────────────────────────────────────────
 
 def get_drive_base():
-    try:
-        idx = sys.argv.index("--")
-        args = sys.argv[idx + 1:]
-    except ValueError:
-        args = []
     parser = argparse.ArgumentParser()
     parser.add_argument("--drive-base", default=DEFAULT_DRIVE_BASE)
-    return parser.parse_args(args).drive_base
+    args, _ = parser.parse_known_args()
+    return args.drive_base
 
 # ─── JSON helpers ──────────────────────────────────────────────────────────────
 
@@ -421,7 +417,7 @@ preloadImages();
 
 # ─── Streamlit UI ──────────────────────────────────────────────────────────────
 
-def render_curve_editor(data, idx):
+def render_curve_editor(data, idx, images_dir=""):
     c = data["reactor_curves"][idx]
     cid = c.get("id", f"courbe_{idx}")
     with st.expander(f"Courbe {idx+1} — {cid}", expanded=(idx == 0)):
@@ -455,6 +451,26 @@ def render_curve_editor(data, idx):
             tt["asset_filename"] = st.text_input(
                 f"Nom fichier #{idx}", value=tt.get("asset_filename", ""),
                 key=f"png_{idx}", help="Nom du fichier PNG/JPEG dans IN/images/")
+            fname = tt.get("asset_filename", "")
+            if fname:
+                fpath = os.path.join(images_dir, fname)
+                if not os.path.exists(fpath) and fname not in st.session_state.uploaded_images:
+                    up_img = st.file_uploader(
+                        f"Image `{fname}` introuvable — charger manuellement #{idx}",
+                        type=["png", "jpg", "jpeg"], key=f"img_up_{idx}"
+                    )
+                    if up_img is not None:
+                        ext = fname.rsplit(".", 1)[-1].lower()
+                        mime = "image/jpeg" if ext in ("jpg", "jpeg") else "image/png"
+                        st.session_state.uploaded_images[fname] = (
+                            f"data:{mime};base64,"
+                            + base64.b64encode(up_img.read()).decode("ascii")
+                        )
+                        st.rerun()
+                elif fname in st.session_state.uploaded_images:
+                    st.success(f"Image `{fname}` chargee en memoire.")
+                else:
+                    st.success(f"Image `{fname}` trouvee sur disque.")
             tt["scale_factor"] = st.slider(
                 f"Taille PNG (scale F03) #{idx}", 0.3, 3.0, float(tt.get("scale_factor", 1.2)), 0.1, key=f"sf_{idx}")
 
@@ -479,12 +495,23 @@ def main():
     # ── Chargement JSON ──────────────────────────────────────────────────────
     if "data" not in st.session_state:
         if not os.path.exists(in_json):
-            st.error(f"plan_de_vol.json introuvable : {in_json}")
-            st.info("Déposer le fichier dans F02_CASTELLAN/IN/ puis relancer.")
-            st.stop()
-        st.session_state.data = load_json(in_json)
+            st.warning(f"plan_de_vol.json introuvable : `{in_json}`")
+            uploaded_json = st.file_uploader(
+                "Charger plan_de_vol.json manuellement", type=["json"], key="json_upload"
+            )
+            if uploaded_json is not None:
+                st.session_state.data = json.load(uploaded_json)
+                st.rerun()
+            else:
+                st.info("Déposer le fichier plan_de_vol.json ci-dessus pour continuer.")
+                st.stop()
+        else:
+            st.session_state.data = load_json(in_json)
 
     data = st.session_state.data
+    images_dir = os.path.join(base, "F02_CASTELLAN", "IN", "images")
+    if "uploaded_images" not in st.session_state:
+        st.session_state.uploaded_images = {}
 
     col_edit, col_sim = st.columns([1, 1], gap="large")
 
@@ -530,7 +557,7 @@ def main():
         st.markdown("### Courbes")
         n_curves = len(data.get("reactor_curves", []))
         for i in range(n_curves):
-            render_curve_editor(data, i)
+            render_curve_editor(data, i, images_dir=images_dir)
         if st.button("+ Ajouter une courbe", key="add_curve"):
             data.setdefault("reactor_curves", []).append({
                 "id": f"courbe_{n_curves + 1}",
@@ -614,9 +641,25 @@ def main():
             data.setdefault("final_frame", {})["freeze_duration_frames"] = \
                 ff.get("freeze_duration_frames",
                        data.get("timing", {}).get("final_freeze_frames", 180))
-            save_json(data, out_json)
-            st.success(f"Plan de vol figé → {out_json}")
-            st.success("validated_by_magos: true | Passer à F03 SIGISMUND.")
+            json_bytes = json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8")
+            saved_to_disk = False
+            for target_path in [out_json, os.path.join("F02_CASTELLAN", "OUT", "plan_de_vol.json")]:
+                try:
+                    save_json(data, target_path)
+                    st.success(f"Plan de vol fige → {target_path}")
+                    saved_to_disk = True
+                    break
+                except Exception:
+                    pass
+            if not saved_to_disk:
+                st.warning("Impossible d'ecrire sur disque — telecharger le fichier ci-dessous.")
+            st.download_button(
+                label="Telecharger plan_de_vol.json",
+                data=json_bytes,
+                file_name="plan_de_vol.json",
+                mime="application/json",
+            )
+            st.success("validated_by_magos: true | Passer a F03 SIGISMUND.")
             st.balloons()
 
     # ── Colonne simulation ───────────────────────────────────────────────────
@@ -638,23 +681,25 @@ def main():
         )
 
         canvas_height = 700 if cm.get("format") == "vertical" else 460
-        images_dir = os.path.join(base, "F02_CASTELLAN", "IN", "images")
         image_map: dict = {}
         for c in data.get("reactor_curves", []):
             tt = c.get("tracking_target", {})
             if tt.get("show_asset") and tt.get("asset_filename"):
                 fname = tt["asset_filename"]
                 if fname not in image_map:
-                    fpath = os.path.join(images_dir, fname)
-                    if os.path.exists(fpath):
-                        with open(fpath, "rb") as img_f:
-                            raw = img_f.read()
-                        ext = fname.rsplit(".", 1)[-1].lower()
-                        mime = "image/jpeg" if ext in ("jpg", "jpeg") else "image/png"
-                        image_map[fname] = (
-                            f"data:{mime};base64,"
-                            + base64.b64encode(raw).decode("ascii")
-                        )
+                    if fname in st.session_state.uploaded_images:
+                        image_map[fname] = st.session_state.uploaded_images[fname]
+                    else:
+                        fpath = os.path.join(images_dir, fname)
+                        if os.path.exists(fpath):
+                            with open(fpath, "rb") as img_f:
+                                raw = img_f.read()
+                            ext = fname.rsplit(".", 1)[-1].lower()
+                            mime = "image/jpeg" if ext in ("jpg", "jpeg") else "image/png"
+                            image_map[fname] = (
+                                f"data:{mime};base64,"
+                                + base64.b64encode(raw).decode("ascii")
+                            )
         components.html(build_canvas_html(data, cam_preview, image_map), height=canvas_height, scrolling=False)
 
         if data.get("validated_by_magos"):
