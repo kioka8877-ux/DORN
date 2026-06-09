@@ -289,6 +289,27 @@ function drawPolarCurve(c,tCur){{
   ctx.stroke();ctx.restore();
 }}
 
+// ─── Tableau de fond ─────────────────────────────────────────────────────────
+
+function drawTableau(){{
+  const tbl=C.scene_tableau||{{}};
+  if(!tbl.enabled||!tbl.asset_filename)return;
+  const img=imgMap[tbl.asset_filename];
+  if(!img||!img.complete||img.naturalWidth===0)return;
+  const scale=Math.max(0.1,Math.min(tbl.scale||1.0,2.0));
+  const alpha=Math.max(0,Math.min(tbl.opacity??0.85,1.0));
+  const maxW=PW*0.8*scale;
+  const maxH=PHT*0.8*scale;
+  const ratio=img.naturalWidth/Math.max(img.naturalHeight,1);
+  let iw,ih;
+  if(ratio>maxW/maxH){{iw=maxW;ih=maxW/ratio;}}
+  else{{ih=maxH;iw=ih*ratio;}}
+  ctx.save();
+  ctx.globalAlpha=alpha;
+  ctx.drawImage(img,PL+PW/2-iw/2,PT+PHT/2-ih/2,iw,ih);
+  ctx.restore();
+}}
+
 function drawFreezeOverlay(){{
   const ff=C.final_frame||{{}};
   const ann=ff.annotation||'';
@@ -345,7 +366,9 @@ function draw(progress){{
   const tSec=(frame/fps).toFixed(2);
   const frozen=frame>=(totF-frz);
   const curves=C.reactor_curves||[];
-  ctx.clearRect(0,0,W,H);ctx.fillStyle='#0a0a0f';ctx.fillRect(0,0,W,H);
+  const bg=hud.background_color||'#0a0a0f';
+  ctx.clearRect(0,0,W,H);ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  drawTableau();
   const[mn,mx]=geo!=='polar'?yRange(curves,xCur):[0,1];
   const axesWorld=hud.axes_world_space||false;
   let camApplied=false;
@@ -408,6 +431,7 @@ function preloadImages(){{
 // ─── Init ────────────────────────────────────────────────────────────────────
 function bootCanvas(){{
   updateCamBtn();
+  document.body.style.background=hud.background_color||'#0a0a0f';
   sld.addEventListener('input',()=>draw(sld.value/1000));
   draw(0.5);
 }}
@@ -553,6 +577,31 @@ def main():
         hud["axes_world_space"] = st.toggle(
             "Axes en world space", value=hud.get("axes_world_space", False), key="aws",
             help="OFF = grille fixe screen space (recommandé). ON = grille zoome avec la caméra.")
+        hud["background_color"] = st.color_picker(
+            "Couleur de fond canvas", value=hud.get("background_color", "#0a0a0f"), key="bgc")
+
+        st.markdown("### Tableau de fond")
+        tbl = data.setdefault("scene_tableau", {})
+        tbl["enabled"] = st.toggle(
+            "Afficher un tableau", value=tbl.get("enabled", False), key="tbl_on")
+        if tbl["enabled"]:
+            up_tbl = st.file_uploader(
+                "Image du tableau (PNG/JPG — local uniquement)",
+                type=["png", "jpg", "jpeg"], key="tbl_upload")
+            if up_tbl is not None:
+                ext_t = up_tbl.name.rsplit(".", 1)[-1].lower()
+                mime_t = "image/jpeg" if ext_t in ("jpg", "jpeg") else "image/png"
+                st.session_state.uploaded_images["__tableau__"] = (
+                    f"data:{mime_t};base64,"
+                    + base64.b64encode(up_tbl.read()).decode("ascii"))
+                tbl["asset_filename"] = "__tableau__"
+                st.rerun()
+            if tbl.get("asset_filename") == "__tableau__" and "__tableau__" in st.session_state.uploaded_images:
+                st.success("Tableau charge en memoire.")
+            tbl["scale"]   = st.slider("Taille du tableau", 0.1, 2.0,
+                                        float(tbl.get("scale", 1.0)), 0.05, key="tbl_sc")
+            tbl["opacity"] = st.slider("Opacite du tableau", 0.0, 1.0,
+                                        float(tbl.get("opacity", 0.85)), 0.05, key="tbl_op")
 
         st.markdown("### Courbes")
         n_curves = len(data.get("reactor_curves", []))
@@ -700,6 +749,10 @@ def main():
                                 f"data:{mime};base64,"
                                 + base64.b64encode(raw).decode("ascii")
                             )
+        tbl_data = data.get("scene_tableau", {})
+        if tbl_data.get("enabled") and tbl_data.get("asset_filename") == "__tableau__":
+            if "__tableau__" in st.session_state.uploaded_images:
+                image_map["__tableau__"] = st.session_state.uploaded_images["__tableau__"]
         components.html(build_canvas_html(data, cam_preview, image_map), height=canvas_height, scrolling=False)
 
         if data.get("validated_by_magos"):
