@@ -20,6 +20,7 @@ export const Main = ({ planDeVol, computed }) => {
     final_frame,
     camera_plan,
     concept_metadata,
+    hud_config = {},
   } = planDeVol;
 
   const { yMin, yMax, totalFrames } = computed;
@@ -51,7 +52,7 @@ export const Main = ({ planDeVol, computed }) => {
     <div
       style={{
         width, height,
-        background: "#000000",
+        background: hud_config.background_color || "#0a0a0f",
         position:   "relative",
         overflow:   "hidden",
         fontFamily: "'Courier New', monospace",
