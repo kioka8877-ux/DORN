@@ -25,6 +25,9 @@ export const Main = ({ planDeVol, computed }) => {
 
   const { yMin, yMax, totalFrames } = computed;
 
+  // Facteur d'échelle F02→F03 : F02 canvas = 460px, F03 = height px
+  const videoScale = height / 460;
+
   // Frames de reveal total (sans freeze)
   const revealFrames =
     (timing.x_range.end - timing.x_range.start) / timing.step_per_frame *
@@ -154,7 +157,7 @@ export const Main = ({ planDeVol, computed }) => {
           paddingTop:    24,
           zIndex:        10,
           fontFamily:    concept_metadata.title_font    || "Impact",
-          fontSize:      concept_metadata.title_size_px || 26,
+          fontSize:      (concept_metadata.title_size_px || 26) * videoScale,
           color:         concept_metadata.title_color   || "#FFFFFF",
           fontWeight:    "bold",
           letterSpacing: 2,
@@ -174,7 +177,7 @@ export const Main = ({ planDeVol, computed }) => {
             textAlign:  "center",
             zIndex:     10,
             fontFamily: concept_metadata.thesis_font    || "Arial",
-            fontSize:   concept_metadata.thesis_size_px || 14,
+            fontSize:   (concept_metadata.thesis_size_px || 14) * videoScale,
             color:      concept_metadata.thesis_color   || "#aaaaaa",
             fontWeight: "bold",
             padding:    "0 48px",
