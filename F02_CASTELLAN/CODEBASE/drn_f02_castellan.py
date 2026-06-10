@@ -34,7 +34,7 @@ REVEAL_STYLES   = ["linear", "ease_in", "ease_out", "ease_in_out", "dramatic"]
 MOVEMENT_ENERGY = ["calm", "cinematic", "aggressive", "viral_edit"]
 GEOMETRY_MODES  = ["cartesian", "polar"]
 FORMATS         = ["vertical", "horizontal"]
-FONTS           = ["monospace", "serif", "sans-serif"]
+FONTS           = ["Impact", "Arial", "Arial Black", "Georgia", "Courier New"]
 
 # ─── Args ──────────────────────────────────────────────────────────────────────
 
@@ -81,7 +81,8 @@ body{{background:#0a0a0f;color:#ccc;font-family:monospace;margin:0;padding:6px}}
 canvas{{display:block;margin:0 auto;background:#0a0a0f}}
 #slider{{width:100%;margin:6px 0;accent-color:#00FFD1}}
 #info{{text-align:center;font-size:11px;color:#777;margin-bottom:3px}}
-#ttl{{text-align:center;font-size:12px;color:#eee;margin-bottom:5px;font-weight:bold}}
+#ttl{{text-align:center;margin-bottom:5px;font-weight:bold}}
+#hyp{{text-align:center;margin-top:8px;font-weight:bold}}
 #camBtn{{display:block;margin:4px auto;padding:4px 20px;background:#1a1a2e;border:1px solid #333355;color:#555577;font-family:monospace;font-size:11px;letter-spacing:1px;cursor:default;pointer-events:none}}
 #camBtn.on{{background:#00FFD1;color:#0a0a0f;font-weight:bold;border-color:#00FFD1}}
 #snapBtn{{display:block;margin:8px auto;padding:3px 14px;background:#1a1a2e;border:1px solid #333;color:#555;cursor:pointer;font-family:monospace;font-size:10px}}
@@ -95,6 +96,7 @@ canvas{{display:block;margin:0 auto;background:#0a0a0f}}
 <meta id="polux-imgs" data-imgs="{imgs_b64}">
 <div id="ttl"></div>
 <canvas id="sim" width="{cw}" height="{ch}"></canvas>
+<div id="hyp"></div>
 <input type="range" id="slider" min="0" max="1000" value="500">
 <div id="info">x=0 | t=0.00s | frame 0</div>
 <button id="camBtn">CAMERA : OFF</button>
@@ -112,7 +114,17 @@ const cam=C.camera_plan||null;
 const hud=C.hud_config||{{}};
 const cnv=document.getElementById('sim'),ctx=cnv.getContext('2d');
 const sld=document.getElementById('slider'),inf=document.getElementById('info');
-document.getElementById('ttl').textContent=C.concept_metadata?.title||'';
+const tm=C.concept_metadata||{{}};
+const ttlEl=document.getElementById('ttl');
+ttlEl.textContent=tm.title||'';
+ttlEl.style.fontSize=(tm.title_size_px||18)+'px';
+ttlEl.style.color=tm.title_color||'#ffffff';
+ttlEl.style.fontFamily=tm.title_font||'Impact';
+const hypEl=document.getElementById('hyp');
+hypEl.textContent=tm.thesis||'';
+hypEl.style.fontSize=(tm.thesis_size_px||14)+'px';
+hypEl.style.color=tm.thesis_color||'#aaaaaa';
+hypEl.style.fontFamily=tm.thesis_font||'Arial';
 const W=cnv.width,H=cnv.height,PL=50,PR=20,PT=30,PB=40;
 const PW=W-PL-PR,PHT=H-PT-PB;
 const t=C.timing||{{}},xS=t.x_range?.start??0,xE=t.x_range?.end??10;
@@ -462,7 +474,7 @@ def render_curve_editor(data, idx, images_dir=""):
                 rs["equation_label_color"] = st.color_picker(
                     f"Couleur équation #{idx}", value=rs.get("equation_label_color", "#FFFFFF"), key=f"elc_{idx}")
                 rs["equation_label_size_px"] = st.slider(
-                    f"Taille équation #{idx}", 8, 18, int(rs.get("equation_label_size_px", 11)), 1, key=f"els_{idx}")
+                    f"Taille équation #{idx}", 8, 48, int(rs.get("equation_label_size_px", 11)), 1, key=f"els_{idx}")
                 cur_elf = rs.get("equation_label_font", "monospace")
                 rs["equation_label_font"] = st.selectbox(
                     f"Police équation #{idx}", FONTS,
@@ -548,6 +560,24 @@ def main():
         cur_fmt = cm.get("format", "vertical")
         cm["format"] = st.radio("Format", FORMATS, index=FORMATS.index(cur_fmt) if cur_fmt in FORMATS else 0,
                                 horizontal=True, key="fmt")
+
+        with st.expander("Style — Titre", expanded=False):
+            cur_tif = cm.get("title_font", "Impact")
+            cm["title_font"]    = st.selectbox("Police titre", FONTS,
+                                               index=FONTS.index(cur_tif) if cur_tif in FONTS else 0, key="tif")
+            cm["title_size_px"] = st.slider("Taille titre (px)", 12, 40,
+                                            int(cm.get("title_size_px", 18)), 1, key="tis")
+            cm["title_color"]   = st.color_picker("Couleur titre",
+                                                   value=cm.get("title_color", "#FFFFFF"), key="tic")
+
+        with st.expander("Style — Thèse", expanded=False):
+            cur_hyf = cm.get("thesis_font", "Arial")
+            cm["thesis_font"]    = st.selectbox("Police thèse", FONTS,
+                                                index=FONTS.index(cur_hyf) if cur_hyf in FONTS else 0, key="hyf")
+            cm["thesis_size_px"] = st.slider("Taille thèse (px)", 12, 40,
+                                             int(cm.get("thesis_size_px", 14)), 1, key="hys")
+            cm["thesis_color"]   = st.color_picker("Couleur thèse",
+                                                    value=cm.get("thesis_color", "#AAAAAA"), key="hyc")
 
         st.markdown("### Espace mathématique")
         se = data.setdefault("space_environment", {})
