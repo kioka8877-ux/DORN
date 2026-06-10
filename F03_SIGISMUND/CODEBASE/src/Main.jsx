@@ -100,15 +100,6 @@ export const Main = ({ planDeVol, computed }) => {
             {space_environment.y_label || "y"}
           </text>
 
-          {/* Titre */}
-          <text
-            x={width / 2} y={48}
-            fill="#FFFFFF" fontSize={26} textAnchor="middle"
-            fontWeight="bold" letterSpacing={2}
-          >
-            {concept_metadata.title || ""}
-          </text>
-
           {/* Courbes */}
           {reactor_curves.map((curve) => (
             <CurveTracer
@@ -151,6 +142,47 @@ export const Main = ({ planDeVol, computed }) => {
           ))}
         </svg>
       </VirtualCamera>
+
+      {/* ── Titre — screen-space, immunisé caméra ── */}
+      <div
+        style={{
+          position:      "absolute",
+          top:           0,
+          left:          0,
+          right:         0,
+          textAlign:     "center",
+          paddingTop:    24,
+          zIndex:        10,
+          fontFamily:    concept_metadata.title_font    || "Impact",
+          fontSize:      concept_metadata.title_size_px || 26,
+          color:         concept_metadata.title_color   || "#FFFFFF",
+          fontWeight:    "bold",
+          letterSpacing: 2,
+        }}
+      >
+        {concept_metadata.title || ""}
+      </div>
+
+      {/* ── Thèse — screen-space, bas d'écran ── */}
+      {concept_metadata.thesis && (
+        <div
+          style={{
+            position:   "absolute",
+            bottom:     24,
+            left:       0,
+            right:      0,
+            textAlign:  "center",
+            zIndex:     10,
+            fontFamily: concept_metadata.thesis_font    || "Arial",
+            fontSize:   concept_metadata.thesis_size_px || 14,
+            color:      concept_metadata.thesis_color   || "#aaaaaa",
+            fontWeight: "bold",
+            padding:    "0 48px",
+          }}
+        >
+          {concept_metadata.thesis}
+        </div>
+      )}
 
       {/* ── Annotation frame finale (doré) ── */}
       {annotOpacity > 0 && (
@@ -374,9 +406,9 @@ const CurveLabel = ({ curve, frame, timing, toCanvasX, toCanvasY, geometryMode }
     <text
       x={cx + 14}
       y={cy - 10}
-      fill={color}
-      fontSize={15}
-      fontFamily="'Courier New', monospace"
+      fill={render_style?.equation_label_color || color}
+      fontSize={render_style?.equation_label_size_px || 15}
+      fontFamily={render_style?.equation_label_font || "'Courier New', monospace"}
       fontWeight="bold"
       opacity={0.92}
       filter={`url(#glow-${curve.id})`}
