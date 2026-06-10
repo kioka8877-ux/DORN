@@ -61,9 +61,12 @@ def save_json(data, path):
 #      make JSON.parse throw a SyntaxError and leave the canvas black.
 # FIX: camera_on parameter persists camera state across Streamlit rerenders.
 
-def build_canvas_html(data, camera_on=False, image_map=None):
+def build_canvas_html(data, camera_on=False, image_map=None, phone_preview=False):
     fmt = data.get("concept_metadata", {}).get("format", "vertical")
-    cw, ch = (360, 460) if fmt == "vertical" else (560, 300)
+    if phone_preview:
+        cw, ch = (360, 640)   # 9:16 exact — iPhone YouTube Shorts
+    else:
+        cw, ch = (360, 460) if fmt == "vertical" else (560, 300)
 
     # Base64 — zero HTML-context issue possible
     json_b64 = base64.b64encode(
@@ -758,8 +761,17 @@ def main():
             key="cam_preview_state",
             help="Stable entre les rerenders. Correspond au bouton CAMERA dans le canvas."
         )
+        phone_preview = st.toggle(
+            "Apercu telephone (YouTube Shorts — 9:16)",
+            value=False,
+            key="phone_preview_state",
+            help="Affiche le canvas aux proportions exactes d'un iPhone (360x640). Calibrez vos tailles de texte dans ce mode."
+        )
 
-        canvas_height = 700 if cm.get("format") == "vertical" else 460
+        if phone_preview:
+            canvas_height = 660
+        else:
+            canvas_height = 700 if cm.get("format") == "vertical" else 460
         image_map: dict = {}
         for c in data.get("reactor_curves", []):
             tt = c.get("tracking_target", {})
@@ -783,7 +795,7 @@ def main():
         if tbl_data.get("enabled") and tbl_data.get("asset_filename") == "__tableau__":
             if "__tableau__" in st.session_state.uploaded_images:
                 image_map["__tableau__"] = st.session_state.uploaded_images["__tableau__"]
-        components.html(build_canvas_html(data, cam_preview, image_map), height=canvas_height, scrolling=False)
+        components.html(build_canvas_html(data, cam_preview, image_map, phone_preview), height=canvas_height, scrolling=False)
 
         if data.get("validated_by_magos"):
             ts = data.get("validation_timestamp", "—")
